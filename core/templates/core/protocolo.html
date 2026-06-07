@@ -13,9 +13,23 @@
     {% csrf_token %}
     <div class="mx-auto ml-[15.625%] mr-[15.625%] border border-slate-300 px-10">
       <div class="space-y-4 text-2xl font-normal ">
-        <div class="inline-flex my-2 justify-between w-full text-slate-500 text-3xl">
-          <h1>Número de Protocolo:</h1><h1>#{{ denuncia.protocolo }}</h1>
+       <div class = "my-6 w-full text-slate-700">
+        <h1 class="text-3xl font-bold mb-4">Denúncia Registrada com Sucesso!</h1>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-6 border-md shadow-sm">
+          <h2 class="text-xl font-semibold text-blue-800 mb-2">Guarde o seu link de acompanhamento</h2>
+          <p class="text-base text-blue-700 mb-4">
+            Para manter o seu completo anonimato, não exigimos contas ou palavras-passe.
+            O link abaixo é a sua <strong>única</strong> forma de acompanhar a resposta da equipe CEREST. Copie-o e guarde-o num local seguro.
+          </p>
+          <div class ="flex flex-col sm:flex-row item-center gap-3">
+            <input type="text" id="linkAcompanhamento" readonly class="w-full p-3 border border-blue-300 rounded bg-white text-gray-600 sm:text-base text-sm outline-none focus:ring-2 focus:ring-blue-400" value="" >
+           <button type="button" onclick="copiarLink()" id="btnCopiar" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition duration-200 ease-in-out whitespace-nowrap" >
+            Copiar Link
+           </button>
+          </div>
         </div>
+      </div>
+
         <div class="font-light" style="margin:100px 0px">
           <div class="justify-between inline-flex w-full px-16 mb-16">
             <h2>Situação</h2>
@@ -94,4 +108,35 @@
 </div>
 
   {% endif %}
+
 {% endblock %}
+{%block script%}
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById('linkAcompanhamento').value = window.location.href
+  });
+
+  function copiarLink(){
+    const input = document.getElementById('linkAcompanhamento');
+    const botao = document.getElementById('btnCopiar');
+
+    //Seleciona o texto e copia
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(() => {
+      const textoOriginal = botao.innerText;
+      botao.innerText = "Copiado!";
+      botao.classList.replace('bg-blue-600', 'bg-green-600');
+      botao.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+
+      setTimeout(() => {
+        botao.innerText = textoOriginal;
+        botao.classList.replace('bg-green-600', 'bg-blue-600');
+        botao.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+      }, 3000);
+    })
+    
+  }
+</script>
+
+{%endblock%}

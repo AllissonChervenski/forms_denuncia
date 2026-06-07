@@ -8,10 +8,10 @@ app_name = 'core'
 
 urlpatterns = [
     path('', views.index, name="index"),
-    path('protocolo/<str:protocolo>/', views.protocol, name="protocol"),
+    path('protocolo/<uuid:protocolo>/', views.protocol, name="protocol"),
     path('cidades-autocomplete/', views.CidadesAutocomplete.as_view(), name='cidades-autocomplete'),
     path('pesquisar/', views.pesquisar, name='pesquisar')
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
+    
  
  

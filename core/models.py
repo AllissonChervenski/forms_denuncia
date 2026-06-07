@@ -1,25 +1,5 @@
 from django.db import models
-import datetime
-import random
-
-
-def gerador_protocolo():
-    ano_atual = datetime.datetime.now().year
-
-    #Tentativa máximas
-    max_tentativas = 20
-    tentativas = 0
-
-
-    while tentativas < max_tentativas:
-        rand_num = random.randint(100000, 999999)
-        protocolo_novo = f'{ano_atual}{rand_num}'
-
-        if not Denuncia.objects.filter(protocolo=protocolo_novo).exists():
-            return protocolo_novo
-        tentativas += 1
-    
-    raise Exception("Erro. Tente novamente mais tarde.")
+import uuid
 
 class Estado(models.Model):
     uf = models.CharField(max_length = 2, unique=True)
@@ -68,7 +48,7 @@ class Denuncia(models.Model):
     data_ocorrido = models.DateField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    protocolo = models.CharField(max_length=10, unique=True, default=gerador_protocolo)
+    protocolo = models.UUIDField(editable=False, default=uuid.uuid4, unique=True)
     situacao = models.BooleanField(default=True)
     
     resposta = models.TextField(blank=True, null=True)
