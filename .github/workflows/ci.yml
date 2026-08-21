@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "master", "main" ]
 
+permissions:
+  contents: write
+
 jobs:
   # ============================================================================
   # JOB 1: Auditoria de Segurança e Validação de Arquivos Sensíveis
@@ -145,7 +148,8 @@ jobs:
           REDIS_URL: "redis://localhost:6379/1"
           DJANGO_SETTINGS_MODULE: test_settings
         run: |
-          pytest --cov=core --cov=dashboard --cov-report=term-missing --cov-report=xml
+          pytest --cov=core --cov=dashboard --cov-report=term-missing --cov-report=xml --cov-report=html:docs/coverage
+          cp README.md docs/README.md 2>/dev/null || true
 
       - name: Upload Coverage Artifact
         if: matrix.python-version == '3.11'
@@ -153,3 +157,11 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
+
+      - name: Deploy Docs & Test Coverage to GitHub Pages
+        if: matrix.python-version == '3.11' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          keep_files: false

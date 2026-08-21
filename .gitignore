@@ -50,6 +50,8 @@ staticq/
 .coverage
 .coverage.*
 htmlcov/
+docs/coverage/
+docs/README.md
 *,cover
 *.cover
 .secrets.baseline
@@ -85,3 +87,4 @@ Thumbs.db
 .agents/
 .hermes/
 .heroku/
+.venv/
