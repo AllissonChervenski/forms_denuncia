@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forms Denúncia - Portal de Documentação e Qualidade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent-blue: #38bdf8;
+      --accent-purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .badge {
+      background: #334155;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .badge.success { background: #065f46; color: #6ee7b7; }
+    .badge.info { background: #075985; color: #7dd3fc; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: transform 0.2s, border-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: var(--primary);
+    }
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      flex-grow: 1;
+      margin-bottom: 1rem;
+    }
+    .card-link {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .highlight-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(56, 189, 248, 0.1));
+      border-color: var(--primary-dark);
+    }
+    .info-box {
+      background: #1e293b;
+      border-left: 4px solid var(--accent-blue);
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Forms Denúncia</h1>
+      <p class="subtitle">Sistema de Registro e Gestão de Denúncias de Negligência à Saúde e Segurança do Trabalhador</p>
+      <div class="badge-bar">
+        <span class="badge success">✓ 74 Testes Aprovados</span>
+        <span class="badge success">✓ Cobertura: 81%+</span>
+        <span class="badge info">Django 5.2</span>
+        <span class="badge info">PostgreSQL 16 & Redis 7</span>
+        <span class="badge info">Docker Multi-Stage</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Card Cobertura de Testes -->
+      <a href="coverage/" class="card highlight-card">
+        <div class="card-icon">📊</div>
+        <h2 class="card-title">Relatório de Testes (Coverage)</h2>
+        <p class="card-desc">Navegue interativamente linha por linha pela cobertura de testes automatizados do Pytest em todos os módulos (Core e Dashboard).</p>
+        <span class="card-link">Abrir Relatório Interativo &rarr;</span>
+      </a>
+
+      <!-- Card Plano de Testes -->
+      <a href="plano_de_testes_ieee829.md" class="card">
+        <div class="card-icon">🧪</div>
+        <h2 class="card-title">Plano de Testes (IEEE 829)</h2>
+        <p class="card-desc">Especificação formal dos 74 casos de teste, cobrindo cenários unitários, integração, segurança, robustez e engenharia de caos.</p>
+        <span class="card-link">Ver Plano de Testes &rarr;</span>
+      </a>
+
+      <!-- Card Deploy Gratuito -->
+      <a href="deploy_gratuito_guia.md" class="card">
+        <div class="card-icon">🚀</div>
+        <h2 class="card-title">Guia de Deploy Gratuito</h2>
+        <p class="card-desc">Manual passo a passo para hospedagem permanente a custo zero na Oracle Cloud Always Free com Docker Compose e SSL Grátis.</p>
+        <span class="card-link">Acessar Guia de Deploy &rarr;</span>
+      </a>
+
+      <!-- Card Arquitetura -->
+      <a href="architecture/" class="card">
+        <div class="card-icon">🏗️</div>
+        <h2 class="card-title">Arquitetura do Sistema</h2>
+        <p class="card-desc">Diagramas e documentação técnica dos componentes: Celery Worker (Compressão de Imagens), Redis, PostgreSQL e Nginx.</p>
+        <span class="card-link">Explorar Arquitetura &rarr;</span>
+      </a>
+    </div>
+
+    <div class="info-box">
+      ℹ️ <strong>Nota Informativa:</strong> Este portal no GitHub Pages hospeda a documentação técnica e os relatórios estáticos de testes do projeto. A aplicação funcional completa em Python/Django com banco de dados PostgreSQL roda conteinerizada em servidores de produção.
+    </div>
+
+    <footer>
+      Forms Denúncia &bull; Projeto de Interesse Público para Saúde e Segurança do Trabalhador &bull; CEREST
+    </footer>
+  </div>
+</body>
+</html>
