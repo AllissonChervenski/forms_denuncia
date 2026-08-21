@@ -18,6 +18,9 @@ __pypackages__/
 *.key
 *.cert
 *.crt
+*database_url.txt
+*.secrets-detected.json
+
 
 # ==============================================================================
 # Banco de Dados Local

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -55,21 +56,48 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'forms_denuncia.wsgi.application'
 
-# Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB', default='forms_denuncia'),
-        'USER': config('POSTGRES_USER', default='postgres'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='postgres'),
-        'HOST': config('POSTGRES_HOST', default='db'),
-        'PORT': config('POSTGRES_PORT', default=5432, cast=int),
-        'CONN_MAX_AGE': config('CONN_MAX_AGE', default=60, cast=int),
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
+# Database (Suporta DATABASE_URL para PaaS como Neon/Render/Supabase ou variáveis individuais)
+DATABASE_URL = config('DATABASE_URL', default=None)
+
+if DATABASE_URL:
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=config('CONN_MAX_AGE', default=60, cast=int),
+                conn_health_checks=True,
+            )
+        }
+    except ImportError:
+        from urllib.parse import urlparse
+        url = urlparse(DATABASE_URL)
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': url.path[1:] if url.path else 'forms_denuncia',
+                'USER': url.username or 'postgres',
+                'PASSWORD': url.password or '',
+                'HOST': url.hostname or 'localhost',
+                'PORT': url.port or 5432,
+                'CONN_MAX_AGE': config('CONN_MAX_AGE', default=60, cast=int),
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('POSTGRES_DB', default='forms_denuncia'),
+            'USER': config('POSTGRES_USER', default='postgres'),
+            'PASSWORD': config('POSTGRES_PASSWORD', default='postgres'),
+            'HOST': config('POSTGRES_HOST', default='db'),
+            'PORT': config('POSTGRES_PORT', default=5432, cast=int),
+            'CONN_MAX_AGE': config('CONN_MAX_AGE', default=60, cast=int),
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+        }
     }
-}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
