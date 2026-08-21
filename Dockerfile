@@ -68,7 +68,8 @@ COPY --from=builder /opt/venv /opt/venv
 COPY . /app
 
 # Cria diretórios de arquivos estáticos e de mídia e concede permissão ao appuser
-RUN mkdir -p /app/static /app/media && \
+RUN mkdir -p /app/static /app/media /app/staticfiles && \
+    chmod +x /app/scripts/entrypoint.sh && \
     chown -R appuser:appuser /app
 
 # Define o usuário padrão para execução (nunca rodar containers em produção como root)
@@ -80,6 +81,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Expõe a porta 8000 na rede interna do Docker
 EXPOSE 8000
+
+# Script de entrada para migrações e coleta de estáticos antes de iniciar
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 
 # Comando padrão de inicialização: Servidor WSGI Gunicorn com 4 workers
 CMD ["gunicorn", "forms_denuncia.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--max-requests", "1000", "--timeout", "30"]
