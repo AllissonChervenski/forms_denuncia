@@ -149,6 +149,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: test_settings
         run: |
           pytest --cov=core --cov=dashboard --cov-report=term-missing --cov-report=xml --cov-report=html:docs/coverage
+          rm -f docs/coverage/.gitignore 2>/dev/null || true
           cp README.md docs/README.md 2>/dev/null || true
 
       - name: Upload Coverage Artifact
