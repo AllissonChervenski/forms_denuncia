@@ -13,8 +13,8 @@ SECRET_KEY = config('SECRET_KEY')
 # Lista de domínios/IPs autorizados a responder requisições
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
-# Origens confiáveis para validação anti-CSRF no Django (ex: https://meudominio.com.br)
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost,http://127.0.0.1', cast=Csv())
+# Origens confiáveis para validação anti-CSRF no Django (ex: https://forms-denuncia.onrender.com)
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://*.onrender.com,https://forms-denuncia.onrender.com,http://localhost,http://127.0.0.1', cast=Csv())
 
 # Header para detecção de HTTPS quando atrás de proxy reverso (Nginx / Load Balancer)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

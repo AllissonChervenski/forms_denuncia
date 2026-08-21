@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseNotAllowed
 
 @login_required
 def index(request):
-    lista = models.Denuncia.objects.all()
+    lista = models.Denuncia.objects.all().order_by('-created_at')
     paginator = Paginator(lista, 10)
 
     page_number = request.GET.get('page', 1)
