@@ -1,0 +1,175 @@
+# ==============================================================================
+# Docker Compose para Ambiente de Produção - forms_denuncia
+# ==============================================================================
+services:
+
+  # 1. Banco de Dados PostgreSQL 16
+  # Motivo: Persistência relacional robusta com suporte a índices trigram (pg_trgm)
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 2. Redis 7 (Cache, Sessões e Message Broker para Celery)
+  # Motivo: Alto desempenho em memória com política LRU e persistência append-only
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 3. Aplicação Django Web (Gunicorn WSGI)
+  # Motivo: Servidor de aplicação com workers concorrentes para atender requisições HTTP
+  web:
+    image: ${IMAGE_NAME:-ghcr.io/allissonchervenski/forms_denuncia}:${IMAGE_TAG:-latest}
+    restart: always
+    command: gunicorn forms_denuncia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --max-requests 1000 --timeout 30
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-True}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False}
+      - DJANGO_SETTINGS_MODULE=forms_denuncia.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 4. Celery Worker (Processamento Assíncrono)
+  # Motivo: Execução de tarefas pesadas em background (ex: sanitização EXIF de fotos)
+  celery:
+    image: ${IMAGE_NAME:-ghcr.io/allissonchervenski/forms_denuncia}:${IMAGE_TAG:-latest}
+    restart: always
+    command: celery -A forms_denuncia worker -l INFO --concurrency=4 --max-tasks-per-child=1000
+    volumes:
+      - media_volume:/app/media
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=forms_denuncia.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 5. Celery Beat (Agendador de Tarefas Periódicas)
+  # Motivo: Disparar rotinas agendadas (limpeza, expiração de protocolos) via banco
+  celery-beat:
+    image: ${IMAGE_NAME:-ghcr.io/allissonchervenski/forms_denuncia}:${IMAGE_TAG:-latest}
+    restart: always
+    command: celery -A forms_denuncia beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=forms_denuncia.settings.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # 6. Proxy Reverso Nginx
+  # Motivo: Terminação HTTP/HTTPS, roteamento, compressão gzip e entrega rápida de estáticos
+  nginx:
+    build:
+      context: ./nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/app/static:ro
+      - media_volume:/app/media:ro
+    depends_on:
+      - web
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  postgres_data:
+    name: forms_denuncia_postgres_data
+  redis_data:
+    name: forms_denuncia_redis_data
+  static_volume:
+    name: forms_denuncia_static_volume
+  media_volume:
+    name: forms_denuncia_media_volume
+
+networks:
+  default:
+    name: forms_denuncia_prod_network

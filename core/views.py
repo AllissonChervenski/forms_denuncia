@@ -1,42 +1,46 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
+from django.contrib.postgres.search import TrigramSimilarity
+from django.views.decorators.http import require_http_methods
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.core import get_usage
 from .models import Denuncia, Cidades, Evidencia
 from .forms import NewDenunciaForm, CloseDenunciaForm, UploadEvidencias
 from dal import autocomplete
 from django.utils.html import format_html
+from .tasks import limpar_exif_imagem
+from django.db.models.functions import Cast
+from django.db.models import TextField
+from django.contrib.postgres.lookups import Unaccent
+from django.db.models import Value
+
+# Custom rate limited error view
+@require_http_methods(["GET", "POST"])
+def ratelimited_error(request, exception=None):
+    """View shown when rate limit is exceeded"""
+    return HttpResponse(
+        'Muitas requisições. Por favor, aguarde um momento e tente novamente.',
+        status=429,
+        content_type='text/plain; charset=utf-8'
+    )
 
 
 class CidadesAutocomplete(autocomplete.Select2QuerySetView):
-        
-        def get_queryset(self):
-            qs = Cidades.objects.filter()
-            if self.q:
-                qs = qs.filter(nome__icontains=self.q)
-                print(self.q)
-            return qs
-        
-        def get_result_label(self, item):
-            return format_html("<p>{}, {}</p>", item.nome, item.estado)
-        
-      
-'''
-
-class CidadesAutocomplete(ListView):
-    model = Cidades
 
     def get_queryset(self):
-        queryset =  super().get_queryset()
-        query = self.request.GET.get('q')
-        if query:
-            queryset = queryset.filter(nome__icontains=query)
-        return queryset
-    
+        qs = Cidades.objects.all().order_by('nome')
+        if self.q:
+            qs = qs.annotate(similarity=TrigramSimilarity(Unaccent('nome'), Unaccent(Value(self.q)))).filter(similarity__gt=0.2).order_by('-similarity')
+            
+        return qs
+
     def get_result_label(self, item):
-        return f"{item.nome}, {item.estado}"
-'''
-def contact (request):
-    return render(request, 'core/contact.html')
+        return format_html("<p>{}, {}</p>", item.nome, item.estado)
 
 
+# Rate limit: 30 requests per minute per IP for GET, 10 submissions per minute for POST
+@ratelimit(key='ip', rate='30/m', method='GET', block=True)
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def index(request):
     if request.method == 'POST':
         form = NewDenunciaForm(request.POST)
@@ -46,57 +50,84 @@ def index(request):
             denuncia = form.save(commit=False)
             denuncia = form.save()
 
-        
             file = request.FILES.getlist('imagem')
             for f in file:
-                evidencia = Evidencia(denuncia = denuncia, imagem=f)
+                evidencia = Evidencia(denuncia=denuncia, imagem=f)
                 evidencia.save()
+                limpar_exif_imagem.delay(evidencia.id)
 
-            return redirect('core:protocol',protocolo=denuncia.protocolo )
-    else:     
+            return redirect('core:protocolo', protocolo=denuncia.protocolo)
+    else:
         form = NewDenunciaForm()
         files = UploadEvidencias()
-    return render(request, 'core/index.html',{
+    return render(request, 'core/index.html', {
         'form': form,
         'files': files,
         'title': 'Nova Denuncia',
     })
 
-def protocol(request, protocolo):
-    denuncia = Denuncia.objects.filter(protocolo=protocolo).first()  
+
+# Rate limit: 60 requests per minute per IP for protocol view
+@ratelimit(key='ip', rate='60/m', method='GET', block=True)
+@ratelimit(key='ip', rate='20/m', method='POST', block=True)
+def protocolo(request, protocolo):
+    denuncia = Denuncia.objects.filter(protocolo=protocolo).first()
     usuario_autenticado = request.user.is_authenticated
     base_template = 'core/base.html'
-    evidencia = Evidencia.objects.filter(denuncia = denuncia)
+    evidencia = Evidencia.objects.filter(denuncia=denuncia)
 
     if request.method == 'POST':
-        close = CloseDenunciaForm(request.POST, instance=denuncia)
+        if not usuario_autenticado:
+            from django.conf import settings
+            return redirect(settings.LOGIN_URL)
 
-        if close.is_valid():
-            if denuncia.situacao:
+        form = CloseDenunciaForm(request.POST, instance=denuncia)
+        action = request.POST.get('action')
+
+        if action == 'reopen':
+            denuncia.situacao = True
+            denuncia.save()
+            return redirect('core:protocolo', protocolo=denuncia.protocolo)
+
+        if form.is_valid():
+            # Salva a resposta (se houver) para as ações 'save' e 'close'
+            if action in ['save', 'close']:
+                form.save()
+
+            # Fecha a denúncia apenas se o botão "Fechar" foi clicado
+            if action == 'close':
                 denuncia.situacao = False
-            else: 
-                denuncia.situacao = True
-                
-            close = close.save(commit=False)
-            close.save()
-    else:
-        close = CloseDenunciaForm(instance=denuncia)
+                denuncia.save()
+            
+            # Redireciona para a mesma página para ver a atualização
+            return redirect('core:protocolo', protocolo=denuncia.protocolo)
 
-    if(usuario_autenticado):
+    else:
+        form = CloseDenunciaForm(instance=denuncia)
+
+    if usuario_autenticado:
         base_template = 'dashboard/base.html'
     return render(request, 'core/protocolo.html', {
         'denuncia': denuncia,
         'evidencia': evidencia,
         'base': base_template,
-        'closeForm': close
+        'closeForm': form
     })
 
+
+import re
+
+# Rate limit: 60 requests per minute per IP for search
+@ratelimit(key='ip', rate='60/m', method='GET', block=True)
 def pesquisar(request):
     query = request.GET.get('query', '')
 
-
     if query:
-        return redirect('core:protocol', protocolo=query)
+        # Extrai o UUID da URL, se for uma URL completa
+        match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', query, re.IGNORECASE)
+        if match:
+            protocolo_uuid = match.group(1)
+            return redirect('core:protocolo', protocolo=protocolo_uuid)
 
     return render(request, 'core/pesquisar.html', {
         'query': query,

@@ -1,0 +1,23 @@
+# docker-compose.override.yml
+# Configurações apenas para desenvolvimento
+
+services:
+  web:
+    # 1. Substitui o comando de produção pelo servidor de desenvolvimento do Django
+    command: python manage.py runserver 0.0.0.0:8000
+    
+    # 2. Mapeia o código local para o diretório /app dentro do contêiner
+    volumes:
+      - .:/app
+    
+    # Opcional: Garante que as portas estejam expostas se não estiver no principal
+    ports:
+      - "8000:8000"
+      
+  # Garante que os outros serviços subam para a aplicação funcionar
+  db:
+    ports:
+      - "5432:5432"
+  redis:
+    ports:
+      - "6379:6379"

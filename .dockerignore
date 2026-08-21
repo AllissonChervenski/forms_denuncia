@@ -1,0 +1,53 @@
+# Git e controle de versão
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Arquivos de ambiente e segredos locais (CRÍTICO: nunca incluir no container)
+.env
+.env.*
+!.env.production.example
+
+# Ambientes virtuais locais
+.venv/
+venv/
+ENV/
+env/
+
+# Cache e compilação Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testes, relatórios e documentação
+tests/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*,cover
+*.cover
+docs/
+.hermes/
+.agents/
+
+# Arquivos temporários e mídia local de desenvolvimento
+media/denuncia_images/*
+!media/denuncia_images/.gitkeep
+staticq/
+*.log
+logs/
+
+# Artefatos de build
+build/
+dist/
+*.egg-info/
+forms_denuncia.egg-info/
+
+# Arquivos de IDE e SO
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

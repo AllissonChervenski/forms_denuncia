@@ -1,0 +1,155 @@
+name: Django CI & Security Audit
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  # ============================================================================
+  # JOB 1: Auditoria de Segurança e Validação de Arquivos Sensíveis
+  # Motivo: Garantir que nenhuma credencial hardcoded ou arquivo indevido suba
+  # ============================================================================
+  security_audit:
+    name: Security & Sensitive Files Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Audit Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install detect-secrets bandit
+
+      - name: Scan for Hardcoded Secrets
+        run: |
+          echo "Executando varredura por segredos e chaves expostas no código..."
+          detect-secrets scan --exclude-files '(\.venv/|media/|staticq/|docs/|\.git/)' > .secrets-detected.json
+          python -c '
+          import json, sys
+          with open(".secrets-detected.json") as f:
+              data = json.load(f)
+          results = data.get("results", {})
+          if results:
+              print(f"ERRO: {len(results)} arquivo(s) com possíveis segredos expostos:")
+              for path, secrets in results.items():
+                  print(f" - {path}: {len(secrets)} ocorrência(s)")
+              sys.exit(1)
+          print("✓ Nenhum segredo ou chave hardcoded encontrado no código.")
+          '
+          rm -f .secrets-detected.json
+
+      - name: Check for Forbidden & Leaked Files (.gitignore audit)
+        run: |
+          echo "Verificando se arquivos proibidos/sensíveis estão versionados..."
+          FORBIDDEN_FILES=$(git ls-files | grep -E '(\.env($|\..*)|db\.sqlite3|\.coverage|.*\.cover|.*\.log|.*\.pem|.*\.key)$' || true)
+          if [ -n "$FORBIDDEN_FILES" ]; then
+            echo "ERRO: Os seguintes arquivos proibidos foram encontrados no repositório:"
+            echo "$FORBIDDEN_FILES"
+            exit 1
+          fi
+          echo "✓ Nenhum arquivo sensível ou proibido encontrado no repositório."
+
+      - name: Run Bandit Security Linter
+        run: |
+          echo "Executando análise estática de segurança do código Python com Bandit..."
+          bandit -r core dashboard forms_denuncia -ll -ii -x "*tests*,*test_settings*"
+
+  # ============================================================================
+  # JOB 2: Testes Automatizados, Cobertura e Django Deploy Check
+  # ============================================================================
+  test:
+    name: Test Suite (Python ${{ matrix.python-version }})
+    needs: security_audit
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Django Deploy Check (Security & Configuration)
+        env:
+          SECRET_KEY: "a-dummy-secret-key-for-testing-only-replace-in-production"
+          DEBUG: "False"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1"
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          CELERY_BROKER_URL: "redis://localhost:6379/0"
+          CELERY_RESULT_BACKEND: "redis://localhost:6379/0"
+          REDIS_URL: "redis://localhost:6379/1"
+        run: |
+          python manage.py check --deploy --settings=forms_denuncia.settings.production
+
+      - name: Run Tests with Coverage
+        env:
+          SECRET_KEY: "a-dummy-secret-key-for-testing-only"
+          DEBUG: "False"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          CELERY_BROKER_URL: "redis://localhost:6379/0"
+          CELERY_RESULT_BACKEND: "redis://localhost:6379/0"
+          REDIS_URL: "redis://localhost:6379/1"
+          DJANGO_SETTINGS_MODULE: test_settings
+        run: |
+          pytest --cov=core --cov=dashboard --cov-report=term-missing --cov-report=xml
+
+      - name: Upload Coverage Artifact
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml

@@ -1,6 +1,6 @@
 from django import forms
 from dal import autocomplete
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from .models import Denuncia, Cidades, Evidencia
 
 INPUT_CLASSES = 'w-full py-4 px-6 border placeholder:font-[Roboto]'
@@ -8,7 +8,10 @@ class CustomCheckboxInput(forms.widgets.CheckboxInput):
     def render(self, name, value, attrs=None, renderer=None):
         # Adapte este HTML conforme necessário para atender aos seus requisitos
         checkbox_html = super().render(name, value, attrs, renderer)
-        return mark_safe(f'<label class=" ml-10 mr-auto mb-4 mt-3 text-lg table cursor-pointer text-black rounded-sm">{checkbox_html} <span class="py-2 px-6  border-r-0 border-slate-300 rounded-sm bg-[#77EB83]" id="check_sim">Sim</span><span class="py-2 px-6 border border-l-0 border-slate-300 rounded-sm"  id="check_nao">Não</span></label>')
+        return format_html(
+            '<label class=" ml-10 mr-auto mb-4 mt-3 text-lg table cursor-pointer text-black rounded-sm">{} <span class="py-2 px-6  border-r-0 border-slate-300 rounded-sm bg-[#77EB83]" id="check_sim">Sim</span><span class="py-2 px-6 border border-l-0 border-slate-300 rounded-sm"  id="check_nao">Não</span></label>',
+            checkbox_html
+        )
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -104,14 +107,6 @@ class CloseDenunciaForm(forms.ModelForm):
         }
 
 class UploadEvidencias(forms.ModelForm):
-
     class Meta:
         model = Evidencia
         fields = ('imagem',)
-
-        widgets = {
-            'imagem': MultipleFileInput(attrs={
-                    'class': INPUT_CLASSES,
-                    'placeholder': "Insira imagens de evidências da ocorrência"
-                }),
-        }

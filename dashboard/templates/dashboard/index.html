@@ -38,7 +38,7 @@
             {% for item in page_obj %}
             <div id="denuncia-{{forloop.counter}}" class="{% if item.anonimo %} bg-[#77EB83] {% else %} bg-[#7798EB] {% endif %} {% if item.situacao == False %} bg-[#DA1F1F] {% endif %} rounded-md">
               <div class="border {% if item.anonimo %} border-[#77EB83] {% else %} border-[#7798EB] {% endif %} {% if item.situacao == False %} border-[#DA1F1F] {% endif %} rounded-md rounded-br-3xl text-xs text-slate-600 my-1 relative bg-white">
-                <a href="{% url 'core:protocol' item.protocolo %}">  
+                <a href="{% url 'core:protocolo' item.protocolo %}">  
                   <div class="flex font-light text-[10px] w-11/12">  
                     <span class="mx-10 w-full">Protocolo</span>
                     <span class="mx-10 w-full">Empresa</span>

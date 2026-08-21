@@ -1,0 +1,360 @@
+# ARQUITETURA DO SISTEMA - FORMS_DENUNCIA
+# Documentação Técnica Completa
+# Gerado em: 2026-07-28
+
+---
+
+## 1. VISÃO GERAL DA ARQUITETURA
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+                        DOCKER COMPOSE STACK                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐     │
+│  │   DB     │◀──▶│  Web     │◀──▶│  Redis   │◀──▶│  Celery  │     │
+│  │PostgreSQL│    │ (Gunicorn)│    │ (Broker) │    │ (Worker) │     │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘     │
+│       │              │              │              │                │
+│       ▼              ▼              ▼              ▼                │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐     │
+│  │ Persist  │    │  Cache/  │    │  Filas   │    │  Tasks   │     │
+│  │  Dados   │    │ Sessions │    │  Celery  │    │  Async   │     │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘     │
+│                                                                        │
+│  ┌──────────┐    ┌──────────┐                                        │
+│  │ Celery   │    │  Flower  │                                        │
+│  │   Beat   │    │(Monitor) │                                        │
+│  └──────────┘    └──────────┘                                        │
+│       │              │                                                │
+│       ▼              ▼                                                │
+│  ┌──────────┐    ┌──────────┐                                        │
+│  │Agendador │    │Dashboard │                                        │
+│  │ Persist. │    │ Visual   │                                        │
+│  └──────────┘    └──────────┘                                        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. COMPONENTES E FUNÇÕES
+
+| Componente | Papel | Tecnologia | Porta |
+|------------|-------|------------|-------|
+| **DB** | Persistência relacional (denúncias, usuários, tarefas agendadas) | PostgreSQL 16 | 5432 |
+| **Redis** | Message Broker + Cache Django + Session Store + Result Backend | Redis 7 Alpine | 6379 |
+| **Web** | Aplicação Django servida via Gunicorn (WSGI) | Django 5.2 + Gunicorn | 8000 |
+| **Celery Worker** | Execução assíncrona de tarefas (limpeza EXIF, e-mails futuros) | Celery 5.6 | - |
+| **Celery Beat** | Agendador de tarefas periódicas (persistido no Postgres) | Celery Beat | - |
+| **Flower** | Monitoramento visual de tarefas/workers/queues | Flower 2.0 | 5555 |
+
+---
+
+## 3. ARQUIVOS EDITADOS POR COMPONENTE
+
+### A. PostgreSQL (DB)
+
+**Arquivos:**
+- `docker-compose.yml` - Serviço `db` com volume persistente, healthcheck, init.sql
+- `init.sql` - Extensões `uuid-ossp` e `pg_trgm`
+- `settings.py` - Configuração `DATABASES` para PostgreSQL
+
+**Snapshot `settings.py` (DB):**
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'forms_denuncia'),
+        'USER': os.getenv('POSTGRES_USER', 'forms_denuncia'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'change-me'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {'connect_timeout': 10},
+    }
+}
+```
+
+---
+
+### B. Redis (Broker + Cache + Sessions + Results)
+
+**Arquivos:**
+- `docker-compose.yml` - Serviço `redis` com AOF, LRU, healthcheck
+- `settings.py` - `CACHES`, `SESSION_ENGINE`, `CELERY_BROKER_URL`, `RESULT_BACKEND`
+
+**Snapshot `settings.py` (Redis/Celery/Cache/RateLimit):**
+```python
+# Celery
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Sao_Paulo'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# Cache & Sessions
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {'max_connections': 50, 'retry_on_timeout': True},
+        },
+        'KEY_PREFIX': 'forms_denuncia',
+        'TIMEOUT': 300,
+    }
+}
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# Rate Limit
+RATELIMIT_ENABLE = os.getenv('RATE_LIMIT_ENABLED', 'True').lower() in ('true', '1', 'yes')
+RATELIMIT_USE_CACHE = 'default'
+RATELIMIT_KEY_PREFIX = 'rl'
+```
+
+---
+
+### C. Celery Worker
+
+**Arquivos:**
+- `forms_denuncia/celery.py` - Config robusta (acks_late, prefetch=1)
+- `core/tasks.py` - Task `limpar_exif_imagem`
+- `core/views.py` - Chamada `limpar_exif_imagem.delay(evidencia.id)`
+- `docker-compose.yml` - Serviço `celery` com concurrency=4, max-tasks-per-child=1000
+
+**Snapshot `forms_denuncia/celery.py`:**
+```python
+import os
+from celery import Celery
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'forms_denuncia.settings')
+app = Celery('forms_denuncia')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+
+# Confiabilidade
+app.conf.task_acks_late = True
+app.conf.task_reject_on_worker_lost = True
+app.conf.worker_prefetch_multiplier = 1
+```
+
+**Snapshot `core/tasks.py`:**
+```python
+@shared_task
+def limpar_exif_imagem(evidencia_id):
+    try:
+        evidencia = Evidencia.objects.get(id=evidencia_id)
+        img = Image.open(evidencia.imagem.path)
+        dados_pixel = list(img.getdata())
+        imagem_limpa = Image.new(img.mode, img.size)
+        imagem_limpa.putdata(dados_pixel)
+        imagem_limpa.save(evidencia.imagem.path)
+        return f"SUCESSO: EXIF limpo para evidência #{evidencia_id}"
+    except Evidencia.DoesNotExist:
+        return f"Erro: Evidência #{evidencia_id} não encontrada."
+    except Exception as e:
+        return f"Erro ao processar imagem: {str(e)}"
+```
+
+---
+
+### D. Celery Beat (Scheduler)
+
+**Arquivos:**
+- `settings.py` - `'django_celery_beat'` em `INSTALLED_APPS`
+- `docker-compose.yml` - Serviço `celery-beat` com DatabaseScheduler
+
+---
+
+### E. Flower (Monitoramento)
+
+**Arquivos:**
+- `docker-compose.yml` - Serviço `flower` com `build: .` e comando `celery -A forms_denuncia.celery flower`
+
+---
+
+### F. Web (Django + Gunicorn)
+
+**Arquivos:**
+- `Dockerfile` - Multi-stage, non-root user, healthcheck
+- `docker-compose.yml` - Comando com migrate + collectstatic + gunicorn
+- `settings.py` - SECRET_KEY, DEBUG, ALLOWED_HOSTS via .env + SECURE_* hardening
+- `core/views.py` - @ratelimit nas views públicas
+
+---
+
+## 4. MÓDULOS PYTHON INSTALADOS (pyproject.toml)
+
+```toml
+dependencies = [
+    # Core
+    "Django>=5.2,<5.3",
+    "gunicorn>=22.0,<23",
+    "psycopg2-binary>=2.9,<3",
+    
+    # Async/Queue
+    "celery>=5.6,<6",
+    "django-celery-beat>=2.7,<3",
+    "flower>=2.0,<3",
+    "redis>=8.0,<9",
+    
+    # Cache/Session
+    "django-redis>=5.4,<6",
+    
+    # Security
+    "django-ratelimit>=4.1,<5",
+    "python-dotenv>=1.0,<2",
+    
+    # Utils
+    "Pillow>=12.2,<13",
+    "django-autocomplete-light>=3.12,<3.13",
+]
+```
+
+---
+
+## 5. VARIÁVEIS DE AMBIENTE (.env)
+
+```bash
+# Django
+DEBUG=True
+SECRET_KEY=sua-chave-secreta-aqui
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# Postgres
+POSTGRES_DB=forms_denuncia
+POSTGRES_USER=forms_denuncia
+POSTGRES_PASSWORD=***
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+
+# Redis
+REDIS_URL=redis://redis:6379/1
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Rate Limit
+RATE_LIMIT_ENABLED=True
+```
+
+---
+
+## 6. RESUMO FUNCIONALIDADES ALTO NÍVEL
+
+| Camada | Funcionalidade | Status |
+|--------|----------------|--------|
+| **Segurança** | SECRET_KEY fora do código, DEBUG controlado por env, SECURE_* automático em prod, Rate Limiting por IP (Redis) | ✅ |
+| **Banco** | PostgreSQL com UUID nativo, migrações versionadas, conexão persistente (CONN_MAX_AGE) | ✅ |
+| **Cache/Sessão** | Redis como cache L2 + Session Store (escala horizontal) | ✅ |
+| **Assíncrono** | Celery Worker (4 processos, reciclagem a cada 1000 tasks) + Beat (agendamento persistido no DB) | ✅ |
+| **Monitoramento** | Flower (porta 5555) para visibilidade de filas, workers, tarefas, latência | ✅ |
+| **Upload Seguro** | Limpeza automática de EXIF/GPS em background (privacidade do denunciante) | ✅ |
+| **Deploy** | Docker Compose multi-serviço com healthchecks, volumes nomeados, rede isolada | ✅ |
+| **Static/Media** | collectstatic no build, volumes persistentes para media/uploads | ✅ |
+
+---
+
+## 7. FLUXO DE REQUISIÇÃO (ENVIO DE DENÚNCIA COM FOTO)
+
+```
+Usuário → Nginx (futuro) → Gunicorn (Web) → Django View
+    │
+    ├─ Salva Denuncia + Evidencia no Postgres
+    ├─ Retorna HTTP 302 (protocolo) IMEDIATAMENTE
+    └─ Enfileira `limpar_exif_imagem.delay(id)` no Redis (Broker)
+                          │
+                          ▼
+              Celery Worker pega da fila
+                          │
+                          ▼
+              Abre imagem → Remove EXIF → Sobrescreve arquivo
+                          │
+                          ▼
+              Guarda resultado no Redis (Result Backend)
+                          │
+                          ▼
+              Flower mostra: SUCCESS, tempo, worker, args
+```
+
+---
+
+## 8. PRÓXIMOS PASSOS NATURAIS
+
+1. **Nginx Reverse Proxy** + TLS (Let's Encrypt) na frente do Gunicorn
+2. **Backup automatizado** do volume `postgres_data` e `media_volume`
+3. **Logs centralizados** (Loki/ELK) via `logging` config no Django
+4. **Testes automatizados** no pipeline (pytest + coverage)
+5. **Tarefas periódicas reais** no Beat (ex: limpeza de sessões expiradas, relatórios)
+
+---
+
+## 9. COMANDOS ÚTEIS
+
+```bash
+# Subir stack
+docker compose up -d
+
+# Ver logs
+docker compose logs -f web
+docker compose logs -f celery
+docker compose logs -f celery-beat
+docker compose logs -f flower
+
+# Migrações e admin
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+
+# Popular cidades (CSV)
+docker compose exec web python manage.py shell -c "from core.csv_reader import *; importar_cidades()"
+
+# Testar site
+curl -I http://localhost:8000
+
+# Flower dashboard
+open http://localhost:5555
+
+# Parar tudo
+docker compose down
+```
+
+---
+
+## 10. ESTRUTURA DE DIRETÓRIOS
+
+```
+forms_denuncia/
+├── .env                    # Variáveis de ambiente (NÃO COMMITAR)
+├── .env.example            # Template de variáveis
+├── .gitignore
+├── docker-compose.yml      # Orquestração completa
+├── Dockerfile              # Imagem Python multi-stage
+├── init.sql                # Init PostgreSQL (extensões)
+├── pyproject.toml          # Dependências modernas
+├── requirements.txt        # Lock de versões
+├── manage.py
+├── forms_denuncia/         # Config Django
+│   ├── __init__.py         # Celery app export
+│   ├── celery.py           # Config Celery robusta
+│   ├── settings.py         # Settings 12-factor
+│   ├── urls.py
+│   └── wsgi.py
+├── core/                   # App principal
+│   ├── models.py           # Denuncia, Evidencia, Cidade, Estado
+│   ├── views.py            # Views com @ratelimit
+│   ├── tasks.py            # Task limpar_exif_imagem
+│   ├── forms.py
+│   ├── csv_reader.py       # Import CSV municípios
+│   └── urls.py
+├── dashboard/              # App admin
+│   ├── views.py
+│   ├── urls.py
+│   └── models.py
+├── media/                  # Uploads (volume persistente)
+├── static/                 # Static files (volume persistente)
+└── templates/              # Templates Django
+```

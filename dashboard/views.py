@@ -20,10 +20,16 @@ def index(request):
         'page_obj': page_obj,
     })
 
-def protocol(request, protocolo):
+def protocolo(request, protocolo):
     lista = models.Denuncia.objects.all()
     if request.method == 'GET':
-        return redirect('core:protocol',protocolo=protocolo)
+  # Extrai o UUID da URL, se for uma URL completa
+        match = request.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', query)
+        if match:
+            protocolo_uuid = match.group(1)
+            return redirect('core:protocolo', protocolo=protocolo_uuid)
+            # Se não for uma URL, assume que a query já é o protocolo (ou vai dar 404, o que é ok)
+        return redirect('core:protocolo',protocolo=protocolo)
     else:
         return render(request, 'dashboard/index.html', {
         })

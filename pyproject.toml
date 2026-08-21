@@ -1,0 +1,58 @@
+[project]
+name = "forms_denuncia"
+version = "0.1.0"
+description = "Formulário de Denúncia de Negligência à Saúde do Trabalhador"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "amqp>=5.3,<6",
+    "asgiref>=3.11,<4",
+    "async-timeout>=5.0,<6",
+    "billiard>=4.2,<5",
+    "celery>=5.6,<6",
+    "click>=8.4,<9",
+    "click-didyoumean>=0.3,<1",
+    "click-plugins>=1.1,<2",
+    "click-repl>=0.3,<1",
+    "Django>=5.2,<5.3",
+    "django-autocomplete-light>=3.12,<3.13",
+    "django-celery-beat>=2.7,<3",
+    "django-ratelimit>=4.1,<5",
+    "django-redis>=5.4,<6",
+    "exceptiongroup>=1.3,<2",
+    "flower>=2.0,<3",
+    "gunicorn>=22.0,<23",
+    "kombu>=5.6,<6",
+    "packaging>=26.2,<27",
+    "Pillow>=12.2,<13",
+    "prompt_toolkit>=3.0,<4",
+    "psycopg2-binary>=2.9,<3",
+    "python-dateutil>=2.9,<3",
+    "python-decouple>=3.8,<4",
+    "redis>=8.0,<9",
+    "six>=1.17,<2",
+    "sqlparse>=0.5,<1",
+    "typing_extensions>=4.15,<5",
+    "tzdata>=2026.2,<2027",
+    "tzlocal>=5.3,<6",
+    "vine>=5.1,<6",
+    "wcwidth>=0.8,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1,<10",
+    "pytest-django>=4.13,<5",
+    "factory-boy>=3.3,<4",
+    "pytest-cov>=5.0,<6",
+    "faker>=30.0,<31",
+    "pytest-mock>=3.14.0"
+]
+
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["forms_denuncia*", "core*", "dashboard*"]

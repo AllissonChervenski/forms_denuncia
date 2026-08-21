@@ -13,6 +13,7 @@
     {% csrf_token %}
     <div class="mx-auto ml-[15.625%] mr-[15.625%] border border-slate-300 px-10">
       <div class="space-y-4 text-2xl font-normal ">
+       {% if not request.user.is_authenticated %}
        <div class = "my-6 w-full text-slate-700">
         <h1 class="text-3xl font-bold mb-4">Denúncia Registrada com Sucesso!</h1>
         <div class="bg-blue-50 border-l-4 border-blue-500 p-6 border-md shadow-sm">
@@ -29,6 +30,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
         <div class="font-light" style="margin:100px 0px">
           <div class="justify-between inline-flex w-full px-16 mb-16">
@@ -88,14 +90,21 @@
        </div>
 
         
-        <form method="POST" action="." enctype="multipart/form-data">
-          {% csrf_token %}
-          {% if denuncia.situacao %}
+        {% if denuncia.situacao %}
+          {# Formulário para responder e fechar #}
           {{ closeForm.as_p }}
-          <button class="ml-auto mt-6 py-4 px-12 text-lg bg-[#77EB83] text-slate-700 flex justify-end"> Fechar </button>
-          {% endif %}
-        </form>
+          <div class="flex justify-end space-x-4 mt-6">
+            <button type="submit" name="action" value="save" class="py-4 px-12 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded"> Salvar </button>
+            <button type="submit" name="action" value="close" class="py-4 px-12 text-lg bg-red-600 hover:bg-red-700 text-white rounded"> Fechar Denúncia </button>
+          </div>
+        {% else %}
+          {# Botão para reabrir #}
+          <div class="flex justify-end mt-6">
+            <button type="submit" name="action" value="reopen" class="py-4 px-12 text-lg bg-green-600 hover:bg-green-700 text-white rounded"> Reabrir Denúncia </button>
+          </div>
         {% endif %}
+
+      {% endif %}
       </div>
     </div>
 </div>
