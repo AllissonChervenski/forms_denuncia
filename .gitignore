@@ -50,8 +50,8 @@ staticq/
 .coverage
 .coverage.*
 htmlcov/
-docs/coverage/
 docs/README.md
+docs/deploy_gratuito_guia.md
 *,cover
 *.cover
 .secrets.baseline

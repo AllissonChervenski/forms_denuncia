@@ -25,10 +25,10 @@
       background-color: var(--bg);
       color: var(--text);
       line-height: 1.6;
-      padding: 2rem 1rem;
+      padding: 2.5rem 1rem;
     }
     .container {
-      max-width: 900px;
+      max-width: 960px;
       margin: 0 auto;
     }
     header {
@@ -56,7 +56,7 @@
     }
     .badge {
       background: #334155;
-      padding: 0.25rem 0.75rem;
+      padding: 0.3rem 0.85rem;
       border-radius: 9999px;
       font-size: 0.85rem;
       font-weight: 500;
@@ -74,23 +74,24 @@
       background-color: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 1.5rem;
-      transition: transform 0.2s, border-color 0.2s;
+      padding: 1.75rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
       text-decoration: none;
       color: inherit;
       display: flex;
       flex-direction: column;
     }
     .card:hover {
-      transform: translateY(-3px);
+      transform: translateY(-4px);
       border-color: var(--primary);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
     .card-icon {
-      font-size: 2rem;
+      font-size: 2.2rem;
       margin-bottom: 0.75rem;
     }
     .card-title {
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
       color: #fff;
@@ -99,25 +100,25 @@
       color: var(--text-muted);
       font-size: 0.95rem;
       flex-grow: 1;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
     }
     .card-link {
       color: var(--primary);
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.35rem;
     }
     .highlight-card {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(56, 189, 248, 0.1));
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(56, 189, 248, 0.12));
       border-color: var(--primary-dark);
     }
     .info-box {
       background: #1e293b;
       border-left: 4px solid var(--accent-blue);
-      padding: 1rem 1.25rem;
-      border-radius: 6px;
+      padding: 1.25rem;
+      border-radius: 8px;
       margin-top: 2rem;
       font-size: 0.95rem;
       color: var(--text-muted);
@@ -136,7 +137,7 @@
       <h1>📋 Forms Denúncia</h1>
       <p class="subtitle">Sistema de Registro e Gestão de Denúncias de Negligência à Saúde e Segurança do Trabalhador</p>
       <div class="badge-bar">
-        <span class="badge success">✓ 74 Testes Aprovados</span>
+        <span class="badge success">✓ 74 Testes Automatizados</span>
         <span class="badge success">✓ Cobertura: 81%+</span>
         <span class="badge info">Django 5.2</span>
         <span class="badge info">PostgreSQL 16 & Redis 7</span>
@@ -146,34 +147,26 @@
 
     <div class="grid">
       <!-- Card Cobertura de Testes -->
-      <a href="coverage/" class="card highlight-card">
+      <a href="coverage/index.html" class="card highlight-card">
         <div class="card-icon">📊</div>
         <h2 class="card-title">Relatório de Testes (Coverage)</h2>
-        <p class="card-desc">Navegue interativamente linha por linha pela cobertura de testes automatizados do Pytest em todos os módulos (Core e Dashboard).</p>
-        <span class="card-link">Abrir Relatório Interativo &rarr;</span>
+        <p class="card-desc">Navegue interativamente linha por linha pela cobertura de testes automatizados do Pytest em todos os módulos da aplicação (Core e Dashboard).</p>
+        <span class="card-link">Abrir Relatório de Cobertura &rarr;</span>
       </a>
 
       <!-- Card Plano de Testes -->
-      <a href="plano_de_testes_ieee829.md" class="card">
+      <a href="plano_de_testes.html" class="card">
         <div class="card-icon">🧪</div>
         <h2 class="card-title">Plano de Testes (IEEE 829)</h2>
-        <p class="card-desc">Especificação formal dos 74 casos de teste, cobrindo cenários unitários, integração, segurança, robustez e engenharia de caos.</p>
-        <span class="card-link">Ver Plano de Testes &rarr;</span>
-      </a>
-
-      <!-- Card Deploy Gratuito -->
-      <a href="deploy_gratuito_guia.md" class="card">
-        <div class="card-icon">🚀</div>
-        <h2 class="card-title">Guia de Deploy Gratuito</h2>
-        <p class="card-desc">Manual passo a passo para hospedagem permanente a custo zero na Oracle Cloud Always Free com Docker Compose e SSL Grátis.</p>
-        <span class="card-link">Acessar Guia de Deploy &rarr;</span>
+        <p class="card-desc">Especificação formal dos 74 casos de teste estilizados, cobrindo fluxos de denúncia, controle de acesso, segurança, robustez e engenharia de caos.</p>
+        <span class="card-link">Visualizar Plano de Testes &rarr;</span>
       </a>
 
       <!-- Card Arquitetura -->
-      <a href="architecture/" class="card">
+      <a href="architecture.html" class="card">
         <div class="card-icon">🏗️</div>
         <h2 class="card-title">Arquitetura do Sistema</h2>
-        <p class="card-desc">Diagramas e documentação técnica dos componentes: Celery Worker (Compressão de Imagens), Redis, PostgreSQL e Nginx.</p>
+        <p class="card-desc">Documentação técnica detalhada dos componentes: Celery Worker (Compressão de Fotos), Redis (Cache/Broker), PostgreSQL 16 e Nginx.</p>
         <span class="card-link">Explorar Arquitetura &rarr;</span>
       </a>
     </div>
