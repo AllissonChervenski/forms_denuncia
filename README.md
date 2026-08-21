@@ -225,8 +225,6 @@ Para implantação em servidores de produção com **Nginx** como proxy reverso,
    docker compose -f docker-compose.prod.yml run --rm web python manage.py collectstatic --noinput
    ```
 
-> 💡 **Hospedagem Gratuita Permanente:** Para o passo a passo completo de como hospedar este projeto a **custo zero** com alta performance (até 4 vCPUs e 24GB de RAM) e SSL gratuito, consulte o **[Guia de Deploy Gratuito na Oracle Cloud Always Free](docs/deploy_gratuito_guia.md)**.
-
 ---
 
 ## 📍 Rotas e Funcionalidades Principais
