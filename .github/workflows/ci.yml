@@ -49,7 +49,7 @@ jobs:
       - name: Check for Forbidden & Leaked Files (.gitignore audit)
         run: |
           echo "Verificando se arquivos proibidos/sensíveis estão versionados..."
-          FORBIDDEN_FILES=$(git ls-files | grep -E '(\.env($|\..*)|db\.sqlite3|\.coverage|.*\.cover|.*\.log|.*\.pem|.*\.key)$' || true)
+          FORBIDDEN_FILES=$(git ls-files | grep -E '(\.env($|\..*)|db\.sqlite3|\.coverage|.*\.cover|.*\.log|.*\.pem|.*\.key)$' | grep -v '\.example$' || true)
           if [ -n "$FORBIDDEN_FILES" ]; then
             echo "ERRO: Os seguintes arquivos proibidos foram encontrados no repositório:"
             echo "$FORBIDDEN_FILES"
