@@ -147,7 +147,7 @@
 
     <div class="grid">
       <!-- Card Cobertura de Testes -->
-      <a href="coverage/index.html" class="card highlight-card">
+      <a href="./coverage/index.html" class="card highlight-card">
         <div class="card-icon">📊</div>
         <h2 class="card-title">Relatório de Testes (Coverage)</h2>
         <p class="card-desc">Navegue interativamente linha por linha pela cobertura de testes automatizados do Pytest em todos os módulos da aplicação (Core e Dashboard).</p>
@@ -155,7 +155,7 @@
       </a>
 
       <!-- Card Plano de Testes -->
-      <a href="plano_de_testes.html" class="card">
+      <a href="./plano_de_testes.html" class="card">
         <div class="card-icon">🧪</div>
         <h2 class="card-title">Plano de Testes (IEEE 829)</h2>
         <p class="card-desc">Especificação formal dos 74 casos de teste estilizados, cobrindo fluxos de denúncia, controle de acesso, segurança, robustez e engenharia de caos.</p>
@@ -163,7 +163,7 @@
       </a>
 
       <!-- Card Arquitetura -->
-      <a href="architecture.html" class="card">
+      <a href="./architecture.html" class="card">
         <div class="card-icon">🏗️</div>
         <h2 class="card-title">Arquitetura do Sistema</h2>
         <p class="card-desc">Documentação técnica detalhada dos componentes: Celery Worker (Compressão de Fotos), Redis (Cache/Broker), PostgreSQL 16 e Nginx.</p>
@@ -179,5 +179,12 @@
       Forms Denúncia &bull; Projeto de Interesse Público para Saúde e Segurança do Trabalhador &bull; CEREST
     </footer>
   </div>
+
+  <script>
+    // Normaliza URL para evitar o problema de trailing slash do GitHub Pages em links relativos
+    if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
+      window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+    }
+  </script>
 </body>
 </html>
