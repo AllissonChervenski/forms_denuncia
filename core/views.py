@@ -38,6 +38,9 @@ class CidadesAutocomplete(autocomplete.Select2QuerySetView):
         return format_html("<p>{}, {}</p>", item.nome, item.estado)
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Rate limit: 30 requests per minute per IP for GET, 10 submissions per minute for POST
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -54,7 +57,14 @@ def index(request):
             for f in file:
                 evidencia = Evidencia(denuncia=denuncia, imagem=f)
                 evidencia.save()
-                limpar_exif_imagem.delay(evidencia.id)
+                try:
+                    limpar_exif_imagem.delay(evidencia.id)
+                except Exception as exc:
+                    logger.warning(f"Celery broker indisponivel, executando compressao de imagem de forma sincrona: {exc}")
+                    try:
+                        limpar_exif_imagem(evidencia.id)
+                    except Exception as inner_exc:
+                        logger.error(f"Erro ao processar imagem da evidencia {evidencia.id}: {inner_exc}")
 
             return redirect('core:protocolo', protocolo=denuncia.protocolo)
     else:

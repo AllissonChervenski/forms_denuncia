@@ -32,7 +32,7 @@ SECURE_HSTS_PRELOAD = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
-# Logging estruturado para stdout (capturado pelo coletor de logs do Docker)
+# Logging estruturado para stdout (capturado pelo coletor de logs do Render / Docker)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -55,7 +55,17 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': config('DJANGO_LOG_LEVEL', default='INFO'),
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
             'propagate': False,
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
         },
     },
 }

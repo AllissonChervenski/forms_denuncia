@@ -128,6 +128,8 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/dashboard/login/'
 
 # Celery and Redis
+import ssl
+
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
@@ -137,17 +139,27 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+if CELERY_BROKER_URL.startswith('rediss://'):
+    CELERY_REDIS_BACKEND_USE_SSL = {'ssl_cert_reqs': ssl.CERT_NONE}
+    CELERY_BROKER_USE_SSL = {'ssl_cert_reqs': ssl.CERT_NONE}
+
 # Redis Cache
+REDIS_URL = config('REDIS_URL', default='redis://redis:6379/0')
+
+redis_connection_kwargs = {
+    'max_connections': 50,
+    'retry_on_timeout': True,
+}
+if REDIS_URL.startswith('rediss://'):
+    redis_connection_kwargs['ssl_cert_reqs'] = ssl.CERT_NONE
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
+        'LOCATION': REDIS_URL,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 50,
-                'retry_on_timeout': True,
-            },
+            'CONNECTION_POOL_KWARGS': redis_connection_kwargs,
         },
         'KEY_PREFIX': 'forms_denuncia',
         'TIMEOUT': 300,
