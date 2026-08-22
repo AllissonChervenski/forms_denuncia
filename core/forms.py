@@ -41,8 +41,7 @@ class NewDenunciaForm(forms.ModelForm):
             'invalid_choice': 'Insira uma cidade válida.',
             'null': 'Insira uma cidade válida.',
         },
-        widget=forms.Select(attrs={
-            'class': 'hidden',
+        widget=forms.HiddenInput(attrs={
             'id': 'id_cidade',
         })
     )
