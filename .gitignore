@@ -43,6 +43,8 @@ __pycache__/
 media/*
 !media/.gitkeep
 static/*
+!static/core/
+!static/core/**
 !static/.gitkeep
 staticq/
 
