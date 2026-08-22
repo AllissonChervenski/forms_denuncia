@@ -1,10 +1,29 @@
 {% extends 'core/base.html' %}
-{% block title %} Pesquisar {%endblock%}
-{%block header_text%} Insira o número do protocolo para visualizar os detalhes{%endblock%}
+
+{% block title %}Pesquisar Protocolo{% endblock %}
+{% block header_text %}Acompanhar Andamento da Denúncia{% endblock %}
 
 {% block content %}
-<form method="get" action="{% url 'core:pesquisar' %}" class="text-center">
-    <input name="query" class="w-1/3 py-4 px-6 border rounded-sm placeholder:font-[Roboto] text-lg " type="text" value="{{query}}" placeholder="Insira o número do protocolo">
-    <button class="ml-auto mt-6 py-4 px-12 text-lg bg-[#77EB83] text-slate-700"> Pesquisar </button>
-</form>
-{%endblock%}
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-10 max-w-2xl mx-auto">
+  <p class="text-slate-600 text-sm sm:text-base text-center mb-6">
+    Digite ou cole abaixo o número de protocolo (ou o link completo recebido) para verificar o status e a resposta do CEREST:
+  </p>
+
+  <form method="get" action="{% url 'core:pesquisar' %}" class="flex flex-col sm:flex-row gap-3">
+    <input 
+      name="query" 
+      class="flex-1 py-3.5 px-5 border border-slate-300 rounded-xl text-slate-800 placeholder:text-slate-400 text-sm sm:text-base focus:ring-2 focus:ring-emerald-400 outline-none transition" 
+      type="text" 
+      value="{{ query|default:'' }}" 
+      placeholder="Ex: d4e6b12a-89a1-4f10-9821-..." 
+      required
+    >
+    <button 
+      type="submit" 
+      class="py-3.5 px-8 text-base font-bold bg-[#77EB83] hover:bg-emerald-400 text-slate-900 rounded-xl transition duration-200 shadow-sm flex items-center justify-center gap-2"
+    >
+      Consultar &rarr;
+    </button>
+  </form>
+</div>
+{% endblock %}

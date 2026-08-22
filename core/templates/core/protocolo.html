@@ -1,141 +1,158 @@
 {% extends base %}
 
-{% block title %}
-  Protocolo
-{% endblock %}
+{% block title %}Protocolo {{ denuncia.protocolo }}{% endblock %}
+
 {% block header_text %}
-  Dados da denúncia. <br />
-  <p class="text-sm">Salve o número de protocolo para acompanhar a denúncia</p>
+  Acompanhamento da Denúncia
+  <span class="block text-sm sm:text-base font-normal text-slate-600 mt-1">Guarde o número de protocolo para consultas futuras</span>
 {% endblock %}
+
 {% block content %}
   {% if denuncia %}
-  <form method="POST" action="." enctype="multipart/form-data">
+  <form method="POST" action="." enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
-    <div class="mx-auto ml-[15.625%] mr-[15.625%] border border-slate-300 px-10">
-      <div class="space-y-4 text-2xl font-normal ">
-       {% if not request.user.is_authenticated %}
-       <div class = "my-6 w-full text-slate-700">
-        <h1 class="text-3xl font-bold mb-4">Denúncia Registrada com Sucesso!</h1>
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-6 border-md shadow-sm">
-          <h2 class="text-xl font-semibold text-blue-800 mb-2">Guarde o seu link de acompanhamento</h2>
-          <p class="text-base text-blue-700 mb-4">
-            Para manter o seu completo anonimato, não exigimos contas ou palavras-passe.
-            O link abaixo é a sua <strong>única</strong> forma de acompanhar a resposta da equipe CEREST. Copie-o e guarde-o num local seguro.
-          </p>
-          <div class ="flex flex-col sm:flex-row item-center gap-3">
-            <input type="text" id="linkAcompanhamento" readonly class="w-full p-3 border border-blue-300 rounded bg-white text-gray-600 sm:text-base text-sm outline-none focus:ring-2 focus:ring-blue-400" value="" >
-           <button type="button" onclick="copiarLink()" id="btnCopiar" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition duration-200 ease-in-out whitespace-nowrap" >
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-8 md:p-10">
+      
+      {% if not request.user.is_authenticated %}
+      <div class="mb-8 p-4 sm:p-6 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl shadow-sm">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Denúncia Registrada com Sucesso!</h1>
+        <h2 class="text-lg sm:text-xl font-semibold text-blue-900 mb-2">Guarde o seu link de acompanhamento</h2>
+        <p class="text-sm sm:text-base text-blue-800 mb-4">
+          Para garantir o seu total anonimato, nenhuma senha ou cadastro foi exigido. 
+          O link abaixo é a sua <strong>única forma</strong> de acompanhar as respostas da equipe CEREST:
+        </p>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <input type="text" id="linkAcompanhamento" readonly class="w-full p-3 border border-blue-300 rounded-lg bg-white text-slate-700 font-mono text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-400" value="">
+          <button type="button" onclick="copiarLink()" id="btnCopiar" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 whitespace-nowrap shadow-sm text-sm sm:text-base flex items-center justify-center">
             Copiar Link
-           </button>
-          </div>
+          </button>
         </div>
       </div>
       {% endif %}
 
-        <div class="font-light" style="margin:100px 0px">
-          <div class="justify-between inline-flex w-full px-16 mb-16">
-            <h2>Situação</h2>
-            <h2>
-              {% if denuncia.situacao %}
-                {% with situacao='Aberto' %}
-                  {{ situacao }}
-                {% endwith %}
-              {% else %}
-                {% with situacao='Fechado' %}
-                  {{ situacao }}
-                {% endwith %}
-              {% endif %}
-            </h2>
-          </div>
-          <div class="justify-between inline-flex w-full px-16 mb-16">
-            <h2>Data de emissão:</h2>
-            <h2>{{denuncia.created_at}}
+      <!-- Grid de Metadados da Denúncia -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-6 border-b border-slate-200 text-sm sm:text-base">
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Situação:</span>
+          <span class="font-bold px-3 py-1 rounded-full text-xs sm:text-sm {% if denuncia.situacao %}bg-emerald-100 text-emerald-800{% else %}bg-red-100 text-red-800{% endif %}">
+            {% if denuncia.situacao %}Aberto{% else %}Fechado{% endif %}
+          </span>
         </div>
-          <div class="justify-between inline-flex w-full px-16 mb-16">
-            <h2>Nome da Empresa:</h2>
-            <h2>{{denuncia.nome_empresa}}
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Data de Emissão:</span>
+          <span class="font-semibold text-slate-800">{{ denuncia.created_at|date:'d/m/Y H:i' }}</span>
         </div>
-        <div class="justify-between inline-flex w-full px-16 mb-16">
-          <h2>Cidade da Empresa:</h2>
-          <h2>{{denuncia.cidade}}, {{denuncia.cidade.estado}}</h2>
-          
-      </div>
-        <div class="justify-between inline-flex w-full px-16 mb-16">
-            <h2>Tipo de denúncia:</h2>
-            <h2>{{denuncia.tipo_denuncia}}</h2>
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Empresa:</span>
+          <span class="font-semibold text-slate-800">{{ denuncia.nome_empresa }}</span>
         </div>
-        <div class="w-full px-16 mb-16">
-            <h2>Descrição:</h2>
-            <p class="border text-lg p-5">{{denuncia.descricao}}</p>
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Localização:</span>
+          <span class="font-semibold text-slate-800">{{ denuncia.cidade }}, {{ denuncia.cidade.estado }}</span>
         </div>
-        <div class="w-full px-16 mb-16">
-          <h2>Resposta:</h2>
-          <p class="border text-lg min-h-[50px] p-5">{{denuncia.resposta}}</p>
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 md:col-span-2 flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Tipo de Denúncia:</span>
+          <span class="font-semibold text-slate-800">{{ denuncia.tipo_denuncia }}</span>
+        </div>
       </div>
 
+      <!-- Descrição da Ocorrência -->
+      <div class="my-6">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 mb-2">Descrição dos Fatos:</h2>
+        <div class="p-4 sm:p-5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+          {{ denuncia.descricao }}
+        </div>
+      </div>
+
+      <!-- Resposta Oficial do CEREST -->
+      <div class="my-6">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 mb-2">Resposta Oficial do CEREST:</h2>
+        <div class="p-4 sm:p-5 bg-emerald-50/50 border border-emerald-200 rounded-xl text-slate-800 text-sm sm:text-base leading-relaxed min-h-[60px] whitespace-pre-line">
+          {% if denuncia.resposta %}
+            {{ denuncia.resposta }}
+          {% else %}
+            <span class="text-slate-400 italic">Denúncia em análise. A equipe técnica ainda não emitiu um parecer conclusivo.</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Evidências Anexadas (Apenas Administrador) -->
       {% if request.user.is_authenticated %}
-            <div class="w-full px-16 mb-16">
-          <h2 class="font-semibold text-xl mb-4">Evidências:</h2>
+        <div class="my-8 pt-6 border-t border-slate-200">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 mb-4">Fotos e Evidências Anexadas:</h2>
           <div class="flex flex-wrap gap-4">
             {% if evidencia.exists %}
               {% for e in evidencia %}
                 <a href="{{ e.imagem.url }}" target="_blank" rel="noopener noreferrer" class="block group">
-                  <img src="{{ e.imagem.url }}" alt="Evidência da denúncia" class="max-h-72 max-w-full rounded-lg shadow-md border border-slate-300 object-cover group-hover:opacity-90 group-hover:shadow-lg transition">
-                  <span class="text-xs text-blue-600 underline block mt-1">Clique para ampliar</span>
+                  <img src="{{ e.imagem.url }}" alt="Evidência da denúncia" class="max-h-64 sm:max-h-72 max-w-full rounded-xl shadow-md border border-slate-200 object-cover group-hover:opacity-90 group-hover:shadow-lg transition">
+                  <span class="text-xs text-blue-600 underline block mt-1">Clique para abrir em alta resolução</span>
                 </a>
               {% endfor %}
             {% else %}
-              <p class="text-slate-500 italic">Nenhuma evidência anexada</p>
+              <p class="text-slate-400 italic text-sm">Nenhuma evidência anexada a este protocolo.</p>
             {% endif %}
           </div>
         </div>
 
-        
-        {% if denuncia.situacao %}
-          {# Formulário para responder e fechar #}
-          {{ closeForm.as_p }}
-          <div class="flex justify-end space-x-4 mt-6">
-            <button type="submit" name="action" value="save" class="py-4 px-12 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded"> Salvar </button>
-            <button type="submit" name="action" value="close" class="py-4 px-12 text-lg bg-red-600 hover:bg-red-700 text-white rounded"> Fechar Denúncia </button>
-          </div>
-        {% else %}
-          {# Botão para reabrir #}
-          <div class="flex justify-end mt-6">
-            <button type="submit" name="action" value="reopen" class="py-4 px-12 text-lg bg-green-600 hover:bg-green-700 text-white rounded"> Reabrir Denúncia </button>
-          </div>
-        {% endif %}
-
+        <!-- Formulário de Gestão da Denúncia -->
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          {% if denuncia.situacao %}
+            <h3 class="font-bold text-lg mb-3">Emitir Parecer e Responder:</h3>
+            <div class="space-y-4">
+              {{ closeForm.as_p }}
+            </div>
+            <div class="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+              <button type="submit" name="action" value="save" class="w-full sm:w-auto py-3 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition shadow-sm">
+                Salvar Resposta
+              </button>
+              <button type="submit" name="action" value="close" class="w-full sm:w-auto py-3 px-8 text-base font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition shadow-sm">
+                Fechar Denúncia
+              </button>
+            </div>
+          {% else %}
+            <div class="flex justify-end mt-4">
+              <button type="submit" name="action" value="reopen" class="w-full sm:w-auto py-3 px-8 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition shadow-sm">
+                Reabrir Denúncia
+              </button>
+            </div>
+          {% endif %}
+        </div>
       {% endif %}
-      </div>
+
     </div>
-</div>
-</form>
+  </form>
   {% else %}
-  <div class="flex justify-center items-center mt-20"> 
-        <p class="text-center text-lg"> 
-        Nenhuma denúncia encontrada com o protocolo fornecido.
-    </p>
-</div>
-
+  <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto shadow-sm"> 
+    <p class="text-lg text-slate-700 font-medium mb-4">Nenhuma denúncia encontrada com o protocolo fornecido.</p>
+    <a href="{% url 'core:pesquisar' %}" class="inline-block py-2.5 px-6 bg-[#77EB83] text-slate-900 rounded-lg font-semibold hover:bg-emerald-400 transition">Tentar Novamente</a>
+  </div>
   {% endif %}
-
 {% endblock %}
-{%block script%}
+
+{% block script %}
 <script>
   document.addEventListener("DOMContentLoaded", function(){
-    document.getElementById('linkAcompanhamento').value = window.location.href
+    const input = document.getElementById('linkAcompanhamento');
+    if (input) {
+      input.value = window.location.href;
+    }
   });
 
   function copiarLink(){
     const input = document.getElementById('linkAcompanhamento');
     const botao = document.getElementById('btnCopiar');
+    if (!input || !botao) return;
 
-    //Seleciona o texto e copia
     input.select();
     input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value).then(() => {
       const textoOriginal = botao.innerText;
-      botao.innerText = "Copiado!";
+      botao.innerText = "Copiado! ✓";
       botao.classList.replace('bg-blue-600', 'bg-green-600');
       botao.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
 
@@ -144,9 +161,7 @@
         botao.classList.replace('bg-green-600', 'bg-blue-600');
         botao.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
       }, 3000);
-    })
-    
+    });
   }
 </script>
-
-{%endblock%}
+{% endblock %}

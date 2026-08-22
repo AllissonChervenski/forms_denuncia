@@ -1,140 +1,149 @@
 {% extends 'dashboard/base.html' %}
+
 {% block header_text %}
-  Gerenciamento de Denúncias
+  Painel de Gestão de Denúncias
 {% endblock %}
 
-
 {% block content %}
+<div class="w-full">
+  <!-- Barra de Busca Responsiva -->
+  <div class="mb-6 max-w-2xl mx-auto">
+    <form method="get" action="{% url 'core:pesquisar' %}" class="flex flex-col sm:flex-row gap-2">
+      <input 
+        name="query" 
+        class="flex-1 py-3 px-5 border border-slate-300 rounded-xl text-slate-800 text-sm sm:text-base placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-400 outline-none" 
+        type="text" 
+        value="{{ query|default:'' }}" 
+        placeholder="Buscar por número do protocolo..."
+      >
+      <button class="py-3 px-8 text-base font-bold bg-[#77EB83] hover:bg-emerald-400 text-slate-900 rounded-xl transition shadow-sm">
+        Buscar
+      </button>
+    </form>
+  </div>
 
-  <div class="mx-auto ml-[10%] mr-[10%] p-2 overflow-x-auto">
-    <div class="text-2xl font-normal font-[Roboto]">
-      <div class="my-0 justify-between text-3xl text-center">
-        <form method="get" action="{% url 'core:pesquisar' %}" class="text-center -space-x-2">
-          <input name="query" class="w-4/5 py-1 px-6 border rounded-l-md placeholder:font-[Roboto] text-lg " type="text" value="{{query}}" placeholder="Insira o número do protocolo">
-          <button class="font-['Roboto_Condensed'] py-1 px-8 text-lg bg-[#77EB83] border text-slate-700 rounded-r-md"> Buscar </button>
-        </form>
-
-        <div class="text-center w-full text-sm">  
-          <div class="flex justify-center items-center space-x-6 p-6"> 
-              <!-- Legenda para 'Aberto' -->
-              <div class="flex items-center space-x-2">  <!-- Alinha verticalmente e adiciona espaço entre elementos -->
-                  <div class="w-4 h-4 bg-green-500"></div>  <!-- Quadrado verde -->
-                  <span>Aberto</span>
-              </div>
-      
-              <!-- Legenda para 'Fechado' -->
-              <div class="flex items-center space-x-2">
-                  <div class="w-4 h-4 bg-red-500"></div>  <!-- Quadrado vermelho -->
-                  <span>Fechado</span>
-              </div>
-      
-              <!-- Legenda para 'Anônimo' -->
-              <div class="flex items-center space-x-2">
-                  <div class="w-4 h-4 bg-[#7798EB]"></div>  <!-- Quadrado azul -->
-                  <span>Não anônimo</span>
-              </div>
-          </div>
-      </div>
-            {% for item in page_obj %}
-            <div id="denuncia-{{forloop.counter}}" class="{% if item.anonimo %} bg-[#77EB83] {% else %} bg-[#7798EB] {% endif %} {% if item.situacao == False %} bg-[#DA1F1F] {% endif %} rounded-md">
-              <div class="border {% if item.anonimo %} border-[#77EB83] {% else %} border-[#7798EB] {% endif %} {% if item.situacao == False %} border-[#DA1F1F] {% endif %} rounded-md rounded-br-3xl text-xs text-slate-600 my-1 relative bg-white">
-                <a href="{% url 'core:protocolo' item.protocolo %}">  
-                  <div class="flex font-light text-[10px] w-11/12">  
-                    <span class="mx-10 w-full">Protocolo</span>
-                    <span class="mx-10 w-full">Empresa</span>
-                      <span class="mx-10 w-full">Data</span>
-                      <span class="mx-10 w-full">Status</span>
-                  </div>
-                  <div class="flex font-light lg:text-lg sm:text-sm md:text-md xs:text-xs w-11/12">
-                      <span class="mx-10 w-full">{{ item.protocolo }}</span>
-                      <span class="mx-10 w-full">{{ item.nome_empresa|truncatechars:16 }}</span>
-                      <span class="mx-10 w-full">{{ item.data_ocorrido|date:'d/m/Y' }}</span>
-                      {% if item.situacao %}
-                          <span class="mx-10 w-full">Aberto</span>
-                      {% else %}
-                          <span class="mx-10 w-full">Fechado</span>
-                      {% endif %}
-                  </div>
-                </a>
-                  <span id="icon-denuncia-{{forloop.counter}}"class="absolute top-0 right-0 mt-1 mr-10 font-bold {% if item.anonimo %} text-[#77EB83] {% else %} text-[#7798EB] {% endif %} {% if item.situacao == False %} text-[#DA1F1F] {% endif %} text-4xl cursor-pointer">+</span>
-                  <div id="gaveta-denuncia-{{forloop.counter}}" style="display: none;" class="font-['Roboto_Condensed'] text-lg text-left border border-t-0 m-3 mt-5">
-                    <div class="flex items-center border-0">
-                      <div class="mr-2 border-t flex-grow -mt-[13.5px]"></div>
-                      <div class="-mt-[13.5px] px-4">DESCRIÇÃO</div>
-                      <div class="ml-2 border-t flex-grow -mt-[13.5px]"></div>
-                  </div>
-                  <div class="mt-2 py-2 px-4 uppercase text-[#888888] text-sm">
-                      {{ item.descricao }}
-                  </div>
-                  
-                  </div>
-                    {% if item.anonimo %}
-                    <div id="anonimo-denuncia-{{forloop.counter}}"class="w-full h-6 flex justify-between bg-[#77EB83] justify-center items-center font-['Roboto_Condensed'] text-black " style="display: none;">
-                      <span class="ml-auto mr-5 border border-black px-1 rounded-sm" >Anônimo<span> 
-                    </div>
-                    {% else %}
-                    <div id="anonimo-denuncia-{{forloop.counter}}"class="w-full h-6 flex justify-between {% if item.situacao %} bg-[#7798EB] {% else %} bg-[#DA1F1F] {% endif %} justify-center items-center font-['Roboto_Condensed'] text-black" style="display: none;">
-                      <span class="ml-auto mr-5 border border-black px-1 rounded-sm" >Não Anônimo<span> 
-                    </div>
-                      {% endif %}        
-                </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <div class="font-['Roboto_Condensed'] flex justify-end mt-10 text-sm">
-            <div class="flex items-center w-auto bg-[#77EB83] p-3 space-x-4 rounded-full">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}" class="hover:font-black bg-white py-2 px-4 rounded-full">Anterior</a>
-            {% endif %}
-            <p class="bg-white rounded-full py-1 px-3">{{page_obj.number}}</p>
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="hover:font-black bg-white py-2 px-4 rounded-full">Próximo</a>
-            {% endif %}
-            </div>
-        </div>
-       
-      </div>
+  <!-- Legenda de Cores -->
+  <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mb-6 text-xs sm:text-sm font-medium text-slate-600">
+    <div class="flex items-center gap-2">
+      <div class="w-3.5 h-3.5 bg-emerald-500 rounded-full"></div>
+      <span>Aberto</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3.5 h-3.5 bg-red-500 rounded-full"></div>
+      <span>Fechado</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3.5 h-3.5 bg-blue-500 rounded-full"></div>
+      <span>Identificado (Não Anônimo)</span>
     </div>
   </div>
 
-  <script>
-    $(document).ready(function(){
-      $('[id*="icon"]').click(function(){
-        var id = $(this).closest('[id^="denuncia"]').attr('id');
-        var gavetaId= "#gaveta-" + id
-        var icon = "#icon-" + id
-        var todasClasses = $(icon).attr('class');
-        // Ou
-        // var todasClasses = $(this).prop('class');
+  <!-- Lista de Denúncias -->
+  <div class="space-y-4">
+    {% for item in page_obj %}
+      <div id="denuncia-{{ forloop.counter }}" class="bg-white border {% if item.situacao == False %}border-l-4 border-l-red-500 border-slate-200{% elif item.anonimo %}border-l-4 border-l-emerald-500 border-slate-200{% else %}border-l-4 border-l-blue-500 border-slate-200{% endif %} rounded-2xl shadow-sm hover:shadow-md transition p-4 sm:p-6">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <!-- Dados da Denúncia -->
+          <a href="{% url 'core:protocolo' item.protocolo %}" class="flex-1 w-full group">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div>
+                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Protocolo</span>
+                <span class="font-mono text-xs sm:text-sm font-bold text-slate-800 group-hover:text-blue-600 transition">{{ item.protocolo }}</span>
+              </div>
+              
+              <div>
+                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Empresa</span>
+                <span class="font-semibold text-slate-800 truncate block">{{ item.nome_empresa }}</span>
+              </div>
 
-        // Dividir as classes em um array
-        var arrayClasses = todasClasses.split(' ');
+              <div>
+                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Data do Ocorrido</span>
+                <span class="text-slate-600">{{ item.data_ocorrido|date:'d/m/Y'|default:'Não informada' }}</span>
+              </div>
 
-        // Encontrar a classe 'text' no array de classes
-        var classeText = arrayClasses.filter(function(classe) {
-            return classe.startsWith('text-[#');
-        });
-       
-        if (classeText.length > 0) {
-          var ultimaClasseText = classeText.pop(); // Pegando a última ocorrência
-          console.log(ultimaClasseText);
-        if($(icon).text() === "+"){
-          $(icon).text('-').addClass('font-[300] border-4 border-'+ultimaClasseText.slice(5) + " w-7 h-7 rounded-full flex justify-center items-center text-6xl  mt-3 pb-0.5");
-        }
-        else{
-          $(icon).text('+').removeClass('font-[300] border-4 border-'+ultimaClasseText.slice(5) + " w-7 h-7 rounded-full flex justify-center items-center text-6xl  mt-3 pb-0.5");
-        }
-        $(gavetaId).toggle();
-        $("#anonimo-" + id).toggle();
-      }
-      })
+              <div>
+                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Status / Tipo</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold {% if item.situacao %}bg-emerald-100 text-emerald-800{% else %}bg-red-100 text-red-800{% endif %}">
+                    {% if item.situacao %}Aberto{% else %}Fechado{% endif %}
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold {% if item.anonimo %}bg-slate-100 text-slate-700{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {% if item.anonimo %}Anônimo{% else %}Identificado{% endif %}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </a>
 
-     
+          <!-- Botão Expandir Descrição -->
+          <button 
+            type="button" 
+            onclick="toggleGaveta('{{ forloop.counter }}')" 
+            class="self-end md:self-center py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+          >
+            <span id="btn-text-{{ forloop.counter }}">Ver Descrição &darr;</span>
+          </button>
+        </div>
+
+        <!-- Gaveta de Detalhes / Descrição -->
+        <div id="gaveta-denuncia-{{ forloop.counter }}" class="hidden mt-4 pt-4 border-t border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Descrição Completa dos Fatos:</div>
+          <p class="text-slate-700 text-sm bg-slate-50 p-4 rounded-xl leading-relaxed whitespace-pre-line">
+            {{ item.descricao }}
+          </p>
+          {% if not item.anonimo and item.email %}
+            <div class="mt-2 text-xs text-blue-700 font-medium">
+              E-mail do denunciante: {{ item.email }}
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    {% empty %}
+      <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
+        Nenhuma denúncia registrada no sistema.
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Paginação Responsiva -->
+  {% if page_obj.has_other_pages %}
+    <div class="flex justify-center items-center gap-2 mt-8 text-sm">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="py-2 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition">
+          &larr; Anterior
+        </a>
+      {% endif %}
+      
+      <span class="py-2 px-4 bg-[#77EB83] text-slate-900 font-bold rounded-lg shadow-sm">
+        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="py-2 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition">
+          Próxima &rarr;
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  function toggleGaveta(id) {
+    const gaveta = document.getElementById('gaveta-denuncia-' + id);
+    const btnText = document.getElementById('btn-text-' + id);
+    if (!gaveta || !btnText) return;
+
+    if (gaveta.classList.contains('hidden')) {
+      gaveta.classList.remove('hidden');
+      btnText.innerHTML = 'Recolher &uarr;';
+    } else {
+      gaveta.classList.add('hidden');
+      btnText.innerHTML = 'Ver Descrição &darr;';
     }
-    )
-  
-  </script>
+  }
+</script>
 {% endblock %}
 
 
