@@ -33,13 +33,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. Django Web Application
+  # 3. Django Web Application (ÚNICO que roda migrações e seed de cidades)
   web:
     build: .
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
-             gunicorn forms_denuncia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --max-requests 1000 --timeout 30 --access-logfile - --error-logfile -"
+    command: gunicorn forms_denuncia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --max-requests 1000 --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -
     volumes:
       - .:/app
       - static_volume:/app/static
@@ -52,6 +49,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - CONTAINER_ROLE=web
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
@@ -65,8 +63,14 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED}
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
 
-  # 4. Celery Worker
+  # 4. Celery Worker (NÃO roda migrações — espera o web ficar healthy)
   celery:
     build: .
     command: celery -A forms_denuncia worker -l INFO --concurrency=4 --max-tasks-per-child=1000
@@ -79,8 +83,9 @@ services:
       redis:
         condition: service_healthy
       web:
-        condition: service_started
+        condition: service_healthy
     environment:
+      - CONTAINER_ROLE=celery
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY}
       - POSTGRES_DB=${POSTGRES_DB}
@@ -93,7 +98,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     restart: always
 
-  # 5. Celery Beat (Periodic Tasks)
+  # 5. Celery Beat (NÃO roda migrações — espera o web ficar healthy)
   celery-beat:
     build: .
     command: celery -A forms_denuncia beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
@@ -105,8 +110,9 @@ services:
       redis:
         condition: service_healthy
       web:
-        condition: service_started
+        condition: service_healthy
     environment:
+      - CONTAINER_ROLE=celery-beat
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY}
       - POSTGRES_DB=${POSTGRES_DB}
@@ -119,13 +125,19 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     restart: always
 
-  # 6. Flower (Celery Monitoring)
+  # 6. Flower (NÃO roda migrações — espera o celery iniciar)
   flower:
     build: .
     command: celery -A forms_denuncia.celery flower --port=5555 --broker=redis://redis:6379/0
     ports:
       - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     environment:
+      - CONTAINER_ROLE=flower
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key}
       - POSTGRES_DB=${POSTGRES_DB:-forms_denuncia}
@@ -136,11 +148,6 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/1
-    depends_on:
-      redis:
-        condition: service_healthy
-      celery:
-        condition: service_started
     restart: always
 
   # 7. Test Suite (run with: docker compose run --rm test)
@@ -155,6 +162,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - CONTAINER_ROLE=test
       - DEBUG=True
       - SECRET_KEY=test-secret-key
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0

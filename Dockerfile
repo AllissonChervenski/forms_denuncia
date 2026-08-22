@@ -75,15 +75,16 @@ RUN mkdir -p /app/static /app/media /app/staticfiles && \
 # Define o usuário padrão para execução (nunca rodar containers em produção como root)
 USER appuser
 
-# Healthcheck do container: Verifica periodicamente a cada 30s se o serviço HTTP responde
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+# Healthcheck do container: Verifica periodicamente se o serviço HTTP responde
+# start-period longo (90s) para permitir que migrações e seed de cidades terminem
+HEALTHCHECK --interval=15s --timeout=10s --start-period=90s --retries=5 \
     CMD curl -f http://localhost:8000/ || exit 1
 
 # Expõe a porta 8000 na rede interna do Docker
 EXPOSE 8000
 
-# Script de entrada para migrações e coleta de estáticos antes de iniciar
+# Script de entrada: só o container web roda migrações (CONTAINER_ROLE=web)
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 
-# Comando padrão de inicialização: Servidor WSGI Gunicorn com 4 workers
-CMD ["gunicorn", "forms_denuncia.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--max-requests", "1000", "--timeout", "30"]
+# Comando padrão: Gunicorn com timeout de 120s para evitar WORKER TIMEOUT
+CMD ["gunicorn", "forms_denuncia.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--max-requests", "1000", "--timeout", "120", "--graceful-timeout", "30", "--keep-alive", "5"]

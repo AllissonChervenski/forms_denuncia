@@ -50,7 +50,7 @@ services:
   web:
     image: ${IMAGE_NAME:-ghcr.io/allissonchervenski/forms_denuncia}:${IMAGE_TAG:-latest}
     restart: always
-    command: gunicorn forms_denuncia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --max-requests 1000 --timeout 30
+    command: gunicorn forms_denuncia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --max-requests 1000 --timeout 120 --graceful-timeout 30 --keep-alive 5
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
