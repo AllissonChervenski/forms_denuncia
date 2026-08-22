@@ -10,8 +10,8 @@ import os
 
 def popular_cidades_estados(apps, schema_editor):
     """
-    Popula Estados e Cidades a partir do CSV.
-    Usa apps.get_model para pegar o modelo histórico (compatível com migrações antigas).
+    Popula Estados e Cidades a partir do CSV de forma ultra-rápida e idempotente.
+    Usa apps.get_model para pegar o modelo histórico (compatível com migrações).
     """
     Estado = apps.get_model('core', 'Estado')
     Cidade = apps.get_model('core', 'Cidades')
@@ -19,29 +19,39 @@ def popular_cidades_estados(apps, schema_editor):
     csv_path = os.path.join(settings.BASE_DIR, 'data/Municipios_normalizados.csv')
 
     if not os.path.exists(csv_path):
-           print(f"AVISO: CSV não encontrado em {csv_path}. Pulando população.")
-           return
+        alt_path = '/app/data/Municipios_normalizados.csv'
+        if os.path.exists(alt_path):
+            csv_path = alt_path
+        else:
+            print(f"AVISO: CSV não encontrado em {csv_path}. Pulando população.")
+            return
     
     print("Iniciando importação de Estados e Cidades...")
 
     estados_cache = {}
-    with open(csv_path, 'r', encoding='latin-1',) as f:
+    cidades_para_criar = []
+    cidades_existentes = set(Cidade.objects.values_list('nome', 'estado__uf'))
+
+    with open(csv_path, 'r', encoding='latin-1') as f:
         reader = csv.DictReader(f)
         for row in reader:
             uf = row['Chave'].strip()
-            nome_cidade = [cidade.strip() for cidade in row['Valores'].split(',')]
             if uf not in estados_cache:
-                estado, _= Estado.objects.get_or_create(uf=uf)
+                estado, _ = Estado.objects.get_or_create(uf=uf)
                 estados_cache[uf] = estado
             else:
                 estado = estados_cache[uf]
 
-            for cidade_nome in nome_cidade:
-                Cidade.objects.get_or_create(nome=cidade_nome, estado=estado)
-                
-     # Get or Create Cidade
+            nomes_cidades = [c.strip() for c in row['Valores'].split(',') if c.strip()]
+            for cidade_nome in nomes_cidades:
+                if (cidade_nome, uf) not in cidades_existentes:
+                    cidades_para_criar.append(Cidade(nome=cidade_nome, estado=estado))
+                    cidades_existentes.add((cidade_nome, uf))
     
-        print("Importação concluída.")
+    if cidades_para_criar:
+        Cidade.objects.bulk_create(cidades_para_criar, ignore_conflicts=True)
+    
+    print("Importação concluída.")
     
 
 
