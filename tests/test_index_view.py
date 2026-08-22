@@ -132,7 +132,7 @@ class TestIndexView:
         assert 'descricao' in form.errors
 
     def test_index_post_rate_limit_excedido(self, client: Client):
-        """TC-IDX.5: Dispara mais de 10 POSTs em 1 minuto e valida resposta 429 (ratelimited_error)."""
+        """TC-IDX.5: Dispara mais de 10 POSTs em 1 minuto e valida resposta 429."""
         cache.clear()
         try:
             estado, _ = Estado.objects.get_or_create(uf='PR')
@@ -150,11 +150,11 @@ class TestIndexView:
 
             # Envia 10 requisições POST válidas (limite é 10/m)
             for i in range(10):
-                resp = client.post(url, payload)
+                resp = client.post(url, payload, REMOTE_ADDR='198.51.100.1')
                 assert resp.status_code == 302, f"POST #{i+1} falhou com {resp.status_code}"
 
             # O 11º POST deve ser bloqueado com 429
-            resp_bloqueado = client.post(url, payload)
+            resp_bloqueado = client.post(url, payload, REMOTE_ADDR='198.51.100.1')
             assert resp_bloqueado.status_code == 429
             assert "Muitas requisições" in resp_bloqueado.content.decode('utf-8')
         finally:
@@ -168,11 +168,11 @@ class TestIndexView:
 
             # Envia 30 requisições GET válidas (limite é 30/m)
             for i in range(30):
-                resp = client.get(url)
+                resp = client.get(url, REMOTE_ADDR='198.51.100.2')
                 assert resp.status_code == 200, f"GET #{i+1} falhou com {resp.status_code}"
 
             # O 31º GET deve ser bloqueado com 429
-            resp_bloqueado = client.get(url)
+            resp_bloqueado = client.get(url, REMOTE_ADDR='198.51.100.2')
             assert resp_bloqueado.status_code == 429
             assert "Muitas requisições" in resp_bloqueado.content.decode('utf-8')
         finally:

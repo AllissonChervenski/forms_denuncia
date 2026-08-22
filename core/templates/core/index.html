@@ -1,73 +1,236 @@
 {% extends 'core/base.html' %}
 
-{% block title %}{{title}}{%endblock%}
-{%block header_text%} Formulário de denúncia de negligência a saúde do trabalhador{%endblock%}
+{% block title %}{{ title }}{% endblock %}
+{% block header_text %}Formulário de Denúncia de Negligência à Saúde do Trabalhador{% endblock %}
 
 {% block content %}
-
-
-<div class="mx-auto ml-[15.625%] mr-[15.625%] border border-slate-300 p-10">
-<form method="POST" action="." enctype="multipart/form-data">
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-8 md:p-10 w-full max-w-full">
+  <form method="POST" action="." enctype="multipart/form-data" class="space-y-6 w-full max-w-full">
     {% csrf_token %}
 
-     <div class="space-y-4 text-2xl font-normal">
+    <div class="space-y-5 text-sm sm:text-base font-normal text-slate-800 w-full max-w-full">
+      {% for field in form %}
+        <div id="field-wrapper-{{ field.name }}" class="flex flex-col gap-1.5 w-full max-w-full">
+          <label for="{{ field.id_for_label }}" class="font-semibold text-slate-700 text-sm sm:text-base">
+            {{ field.label }}
+          </label>
+          <div class="w-full max-w-full">
+            {% if field.name == 'cidade' %}
+              <div class="relative w-full max-w-full">
+                <input 
+                  type="text" 
+                  id="cidade_input" 
+                  class="w-full max-w-full py-3 px-4 border border-slate-300 rounded-lg text-slate-800 text-sm sm:text-base placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 outline-none transition box-border bg-white" 
+                  placeholder="Digite o nome da sua cidade (ex: Curitiba, São Paulo)..." 
+                  autocomplete="off"
+                  value="{% if form.instance.cidade %}{{ form.instance.cidade.nome }}, {{ form.instance.cidade.estado }}{% endif %}"
+                >
+                <div id="cidade_spinner" class="hidden absolute right-3 top-3.5 text-slate-400 text-xs font-medium">
+                  Buscando...
+                </div>
+                {{ field }}
+                
+                <div id="cidade_dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 divide-y divide-slate-100">
+                </div>
+              </div>
+            {% else %}
+              {{ field }}
+            {% endif %}
+          </div>
+          {% if field.help_text %}
+            <span class="text-xs text-slate-500">{{ field.help_text }}</span>
+          {% endif %}
+          {% if field.errors %}
+            <div class="text-xs text-red-600 font-semibold">{{ field.errors }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
 
-        {{ form.as_p }}
-        {{ files.as_p  }}
+      {% for field in files %}
+        <div class="flex flex-col gap-1.5 w-full max-w-full">
+          <label for="{{ field.id_for_label }}" class="font-semibold text-slate-700 text-sm sm:text-base">
+            {{ field.label }}
+          </label>
+          <div class="w-full max-w-full">
+            {{ field }}
+          </div>
+          {% if field.errors %}
+            <div class="text-xs text-red-600 font-semibold">{{ field.errors }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+      <script>
+        $(document).ready(function(){
+          // 1. Autocomplete direto no campo Cidade com validação estrita
+          var $cidadeInput = $('#cidade_input');
+          var $cidadeSelect = $('#id_cidade');
+          var $cidadeDropdown = $('#cidade_dropdown');
+          var $cidadeSpinner = $('#cidade_spinner');
+          var selectedCityText = $cidadeInput.val().trim();
+          var searchTimeout = null;
 
-        {{ form.media }}
-<script>
-            $(document).ready(function(){
+          function setCidadeError(msg) {
+            $('#cidade-error-msg').remove();
+            if (msg) {
+              $cidadeInput.addClass('border-red-500 focus:ring-red-400').removeClass('border-slate-300 focus:ring-emerald-400');
+              $cidadeInput.closest('#field-wrapper-cidade').append(
+                '<div id="cidade-error-msg" class="text-xs text-red-600 font-semibold mt-1">' + msg + '</div>'
+              );
+            } else {
+              $cidadeInput.removeClass('border-red-500 focus:ring-red-400').addClass('border-slate-300 focus:ring-emerald-400');
+            }
+          }
 
-                // Ocultar o campo de e-mail quando o checkbox de 'anonimo' estiver marcado
-                $('#id_anonimo').change(function(){
-                    if ($(this).is(':checked')) {
-                        $('#id_email').closest('p').show();  // Esconde o parágrafo que envolve o campo de e-mail
-                    } else {
-                        $('#id_email').closest('p').hide();  // Mostra o parágrafo que envolve o campo de e-mail
-                    }
-                });
-                // Executar o código ao carregar a página se o checkbox 'anonimo' já estiver marcado
-                if ($('#id_anonimo').is(':checked')) {
-                    $('#id_email').closest('p').hide();
+          $cidadeInput.on('input', function(e) {
+            var term = $(this).val().trim();
+            clearTimeout(searchTimeout);
+
+            // Se o texto digitado for diferente da cidade selecionada, invalida a seleção
+            if (term !== selectedCityText) {
+              $cidadeSelect.val('');
+              selectedCityText = '';
+            }
+
+            if (term.length < 1) {
+              $cidadeDropdown.empty().addClass('hidden');
+              setCidadeError(null);
+              return;
+            }
+
+            $cidadeSpinner.removeClass('hidden');
+
+            searchTimeout = setTimeout(function() {
+              $.ajax({
+                url: "{% url 'core:cidades-autocomplete' %}",
+                data: { q: term },
+                dataType: 'json',
+                success: function(data) {
+                  $cidadeSpinner.addClass('hidden');
+                  $cidadeDropdown.empty();
+                  var results = data.results || [];
+
+                  if (results.length === 0) {
+                    $cidadeDropdown.html('<div class="p-3 text-slate-400 text-sm text-center">Nenhuma cidade encontrada</div>').removeClass('hidden');
+                    return;
+                  }
+
+                  results.forEach(function(item) {
+                    var $option = $('<div class="p-3.5 hover:bg-emerald-50 hover:text-emerald-900 cursor-pointer font-medium text-slate-700 text-sm sm:text-base transition"></div>');
+                    $option.text(item.text);
+                    $option.on('mousedown touchstart', function(evt) {
+                      evt.preventDefault();
+                      $cidadeInput.val(item.text);
+                      selectedCityText = item.text;
+                      
+                      if ($cidadeSelect.find('option[value="' + item.id + '"]').length) {
+                        $cidadeSelect.val(item.id);
+                      } else {
+                        var newOption = new Option(item.text, item.id, true, true);
+                        $cidadeSelect.append(newOption).val(item.id).trigger('change');
+                      }
+                      
+                      setCidadeError(null);
+                      $cidadeDropdown.empty().addClass('hidden');
+                    });
+                    $cidadeDropdown.append($option);
+                  });
+
+                  $cidadeDropdown.removeClass('hidden');
+                },
+                error: function() {
+                  $cidadeSpinner.addClass('hidden');
                 }
+              });
+            }, 200);
+          });
 
-                $('#check_sim').click(function() {
-                    // Alterar o estado do checkbox para marcado
-                    $('#id_anonimo').prop('checked', true);
-                    // Esconder o campo de e-mail
-                    $('#id_email').closest('p').hide();
-                    $(this).addClass('bg-[#77EB83]').removeClass('border');
-                    $('#check_nao').removeClass('bg-[#DA1F1F]').addClass('border')
-                });
-        
-                // Adicionar evento de clique para o span #check_nao
-                $('#check_nao').click(function() {
-                    // Alterar o estado do checkbox para desmarcado
-                    $('#id_anonimo').prop('checked', false);
-                    // Mostrar o campo de e-mail
-                    $('#id_email').closest('p').show();
-                    $(this).addClass('bg-[#DA1F1F]').removeClass('border');
-                    $('#check_sim').removeClass('bg-[#77EB83]').addClass('border')
-                });
-            });
-        </script>
+          // Validação ao mudar de campo (blur): se não selecionou cidade válida da lista, avisa
+          $cidadeInput.on('blur', function() {
+            var term = $(this).val().trim();
+            if (term && (!$cidadeSelect.val() || term !== selectedCityText)) {
+              $cidadeSelect.val('');
+              setCidadeError('Insira uma cidade válida.');
+            } else if (!term) {
+              $cidadeSelect.val('');
+              setCidadeError(null);
+            } else {
+              setCidadeError(null);
+            }
+          });
+
+          // Fecha o dropdown ao clicar fora
+          $(document).on('click', function(e) {
+            if (!$(e.target).closest('#field-wrapper-cidade').length) {
+              $cidadeDropdown.addClass('hidden');
+            }
+          });
+
+          // Validação ao enviar o formulário
+          $('form').on('submit', function(e) {
+            var term = $cidadeInput.val().trim();
+            if (!term || !$cidadeSelect.val() || term !== selectedCityText) {
+              e.preventDefault();
+              $cidadeSelect.val('');
+              setCidadeError('Insira uma cidade válida.');
+              $cidadeInput.focus();
+              return false;
+            }
+          });
+
+          // 2. Máscara automática de Data dd/mm/aaaa
+          var $dataInput = $('#id_data_ocorrido');
+          $dataInput.on('input', function() {
+            var v = $(this).val().replace(/\D/g, '').slice(0, 8);
+            if (v.length >= 5) {
+              $(this).val(v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4));
+            } else if (v.length >= 3) {
+              $(this).val(v.slice(0, 2) + '/' + v.slice(2));
+            } else {
+              $(this).val(v);
+            }
+          });
+
+          // 3. Controle de visibilidade de e-mail (Anônimo)
+          function updateEmailVisibility() {
+            if ($('#id_anonimo').is(':checked')) {
+              $('#field-wrapper-email').hide();
+            } else {
+              $('#field-wrapper-email').show();
+            }
+          }
+
+          $('#id_anonimo').change(updateEmailVisibility);
+          updateEmailVisibility();
+
+          $('#check_sim').click(function() {
+            $('#id_anonimo').prop('checked', true);
+            updateEmailVisibility();
+            $(this).addClass('bg-[#77EB83]').removeClass('border');
+            $('#check_nao').removeClass('bg-[#DA1F1F]').addClass('border');
+          });
+
+          $('#check_nao').click(function() {
+            $('#id_anonimo').prop('checked', false);
+            updateEmailVisibility();
+            $(this).addClass('bg-[#DA1F1F]').removeClass('border');
+            $('#check_sim').removeClass('bg-[#77EB83]').addClass('border');
+          });
+        });
+      </script>
     </div>
 
     {% if form.errors or form.non_field_errors %}
-    <div class="mb-3 p-6 bg-red-100 rounded-xl">
-        {% for field in form %}
-            {{ field.errors }}
-        {% endfor %}
-
-        {{ form.non_field_errors }} 
-    </div>    
+      <div class="mt-6 p-4 sm:p-6 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm sm:text-base">
+        {{ form.non_field_errors }}
+      </div>
     {% endif %}
-    
-    <button class="ml-auto mt-6 py-4 px-12 text-lg bg-[#77EB83] text-slate-700 flex justify-end"> Enviar </button>
-</form>
 
+    <div class="mt-8 flex justify-end">
+      <button type="submit" class="w-full sm:w-auto py-3.5 px-10 text-base sm:text-lg font-bold bg-[#77EB83] hover:bg-emerald-400 text-slate-900 rounded-xl transition duration-200 shadow-sm flex items-center justify-center gap-2">
+        Enviar Denúncia &rarr;
+      </button>
+    </div>
+  </form>
 </div>
-{%endblock%}
+{% endblock %}

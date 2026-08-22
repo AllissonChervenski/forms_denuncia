@@ -12,7 +12,7 @@ from .tasks import limpar_exif_imagem
 from django.db.models.functions import Cast
 from django.db.models import TextField
 from django.contrib.postgres.lookups import Unaccent
-from django.db.models import Value
+from django.db.models import Value, Q
 
 # Custom rate limited error view
 @require_http_methods(["GET", "POST"])
@@ -28,14 +28,29 @@ def ratelimited_error(request, exception=None):
 class CidadesAutocomplete(autocomplete.Select2QuerySetView):
 
     def get_queryset(self):
-        qs = Cidades.objects.all().order_by('nome')
+        qs = Cidades.objects.select_related('estado').all().order_by('nome')
         if self.q:
-            qs = qs.annotate(similarity=TrigramSimilarity(Unaccent('nome'), Unaccent(Value(self.q)))).filter(similarity__gt=0.2).order_by('-similarity')
-            
+            q_clean = self.q.strip()
+            if q_clean:
+                try:
+                    qs_trgm = qs.annotate(
+                        similarity=TrigramSimilarity(Unaccent('nome'), Unaccent(Value(q_clean)))
+                    ).filter(similarity__gt=0.2).order_by('-similarity')
+                    
+                    if qs_trgm.exists():
+                        return qs_trgm
+                except Exception:
+                    pass
+
+                return qs.filter(
+                    Q(nome__icontains=q_clean) |
+                    Q(estado__uf__iexact=q_clean)
+                ).order_by('nome')
+
         return qs
 
     def get_result_label(self, item):
-        return format_html("<p>{}, {}</p>", item.nome, item.estado)
+        return f"{item.nome}, {item.estado}"
 
 
 import logging

@@ -84,16 +84,16 @@ class TestCidadesAutocomplete:
         assert cidade_top.nome == 'Curitiba'
 
     def test_autocomplete_result_label(self):
-        """TC-AC.5: Valida se o rótulo de retorno formatado contém <p>Nome, Estado</p>."""
+        """TC-AC.5: Valida se o rótulo de retorno formatado contém Nome, Estado sem tags HTML."""
         estado, _ = Estado.objects.get_or_create(uf='PR')
         cidade, _ = Cidades.objects.get_or_create(nome='Curitiba', estado=estado)
 
         view = CidadesAutocomplete()
         label = view.get_result_label(cidade)
 
-        expected_label = f"<p>{cidade.nome}, {cidade.estado}</p>"
+        expected_label = f"{cidade.nome}, {cidade.estado}"
         assert str(label) == expected_label
-        assert "<p>Curitiba, PR</p>" == str(label)
+        assert "Curitiba, PR" == str(label)
 
     def test_autocomplete_query_vazia_ou_espacos(self, client: Client):
         """TC-AC.6: Busca apenas com espaços ou string vazia."""
