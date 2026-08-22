@@ -112,6 +112,12 @@ LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
+DATE_INPUT_FORMATS = [
+    '%d/%m/%Y',
+    '%d/%m/%y',
+    '%Y-%m-%d',
+]
+DATE_FORMAT = 'd/m/Y'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -149,6 +155,8 @@ REDIS_URL = config('REDIS_URL', default='redis://redis:6379/0')
 redis_connection_kwargs = {
     'max_connections': 50,
     'retry_on_timeout': True,
+    'socket_connect_timeout': 5,
+    'socket_timeout': 5,
 }
 if REDIS_URL.startswith('rediss://'):
     redis_connection_kwargs['ssl_cert_reqs'] = ssl.CERT_NONE
@@ -166,8 +174,8 @@ CACHES = {
     }
 }
 
-# Session backend
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# Session backend (cached_db: rápido com cache em Redis e fallback seguro no PostgreSQL)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
 
 # Rate Limiting
